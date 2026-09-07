@@ -1,0 +1,2251 @@
+{
+  "users": [
+    {
+      "id": "usr_admin",
+      "name": "أحمد زهران (مدير المنصة)",
+      "email": "admin@demo.com",
+      "phone": "01001234567",
+      "role": "admin",
+      "avatarUrl": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80",
+      "password": "admin",
+      "createdAt": "2026-01-01T10:00:00Z"
+    },
+    {
+      "id": "usr_customer1",
+      "name": "سارة أحمد حسن",
+      "email": "customer@demo.com",
+      "phone": "01123456789",
+      "role": "customer",
+      "avatarUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80",
+      "password": "demo",
+      "createdAt": "2026-01-10T12:00:00Z"
+    },
+    {
+      "id": "usr_customer2",
+      "name": "طارق عبد المنعم",
+      "email": "tarek@example.com",
+      "phone": "01234567890",
+      "role": "customer",
+      "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
+      "password": "demo",
+      "createdAt": "2026-01-15T14:00:00Z"
+    },
+    {
+      "id": "usr_provider1",
+      "name": "الأسطى محمود حسن",
+      "email": "provider@demo.com",
+      "phone": "01019876543",
+      "role": "provider",
+      "avatarUrl": "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&auto=format&fit=crop&q=80",
+      "password": "demo",
+      "createdAt": "2026-01-05T09:00:00Z"
+    },
+    {
+      "id": "usr_provider2",
+      "name": "المهندس أحمد الشافعي",
+      "email": "ahmed.electric@demo.com",
+      "phone": "01155554321",
+      "role": "provider",
+      "avatarUrl": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
+      "password": "demo",
+      "createdAt": "2026-01-06T10:00:00Z"
+    },
+    {
+      "id": "usr_provider3",
+      "name": "كابتن حسام الصياد",
+      "email": "hossam.hvac@demo.com",
+      "phone": "01222223344",
+      "role": "provider",
+      "avatarUrl": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&auto=format&fit=crop&q=80",
+      "password": "demo",
+      "createdAt": "2026-01-07T11:00:00Z"
+    },
+    {
+      "id": "usr_provider4",
+      "name": "عماد النجار",
+      "email": "emad.wood@demo.com",
+      "phone": "01066667788",
+      "role": "provider",
+      "avatarUrl": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&auto=format&fit=crop&q=80",
+      "password": "demo",
+      "createdAt": "2026-01-08T09:30:00Z"
+    },
+    {
+      "id": "usr_provider5",
+      "name": "مصطفى الجوهري",
+      "email": "mostafa.paint@demo.com",
+      "phone": "01177778899",
+      "role": "provider",
+      "avatarUrl": "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=200&auto=format&fit=crop&q=80",
+      "password": "demo",
+      "createdAt": "2026-01-09T08:00:00Z"
+    },
+    {
+      "id": "usr_provider6",
+      "name": "م / شريف عبد الوهاب",
+      "email": "sherif.appliances@demo.com",
+      "phone": "01288889900",
+      "role": "provider",
+      "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      "password": "demo",
+      "createdAt": "2026-01-10T11:30:00Z"
+    },
+    {
+      "id": "usr_provider7",
+      "name": "إيمان فتحي (شركة النقاء للتنظيف)",
+      "email": "alnaqaa.clean@demo.com",
+      "phone": "01099990011",
+      "role": "provider",
+      "avatarUrl": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80",
+      "password": "demo",
+      "createdAt": "2026-01-11T12:00:00Z"
+    },
+    {
+      "id": "usr_provider8",
+      "name": "الصقر لنقل وتغليف الأثاث",
+      "email": "alsaqr.movers@demo.com",
+      "phone": "01100001122",
+      "role": "provider",
+      "avatarUrl": "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=200&auto=format&fit=crop&q=80",
+      "password": "demo",
+      "createdAt": "2026-01-12T13:00:00Z"
+    },
+    {
+      "id": "usr_provider9",
+      "name": "الأسطى إبراهيم خليل",
+      "email": "ibrahim.plumber@demo.com",
+      "phone": "01211112233",
+      "role": "provider",
+      "avatarUrl": "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?w=200&auto=format&fit=crop&q=80",
+      "password": "demo",
+      "createdAt": "2026-01-13T14:00:00Z"
+    },
+    {
+      "id": "usr_provider10",
+      "name": "كريم الصاوي",
+      "email": "karim.electric@demo.com",
+      "phone": "01033334455",
+      "role": "provider",
+      "avatarUrl": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=200&auto=format&fit=crop&q=80",
+      "password": "demo",
+      "createdAt": "2026-01-14T15:00:00Z"
+    }
+  ],
+  "customers": [
+    {
+      "id": "cust_1",
+      "userId": "usr_customer1",
+      "address": "شارع عباس العقاد - مدينة نصر",
+      "preferredAreaId": "loc_nasr",
+      "notes": "عميل مميز"
+    },
+    {
+      "id": "cust_2",
+      "userId": "usr_customer2",
+      "address": "شارع مصدق - الدقي",
+      "preferredAreaId": "loc_dokki",
+      "notes": ""
+    }
+  ],
+  "providers": [
+    {
+      "id": "prov_1",
+      "userId": "usr_provider1",
+      "businessName": "الأسطى محمود للسباكة الحديثة",
+      "bio": "فني سباكة معتمد ومتخصص في كشف التسريبات وصيانة السخانات والمواسير الحرارية.",
+      "experienceYears": 14,
+      "rating": 4.8,
+      "reviewCount": 6,
+      "isVerified": false,
+      "isActive": true,
+      "categoryIds": [
+        "cat_plumbing"
+      ],
+      "serviceIds": [
+        "srv_plumb_leaks",
+        "srv_plumb_mixers",
+        "srv_plumb_heaters"
+      ],
+      "areaIds": [
+        "loc_mohandessin",
+        "loc_dokki",
+        "loc_agouza",
+        "loc_zayed"
+      ],
+      "workingHours": {
+        "start": "08:00",
+        "end": "22:00",
+        "daysOff": [
+          "الجمعة"
+        ]
+      },
+      "workPhotos": [
+        "https://images.unsplash.com/photo-1581244277943-fe4a9c777189?w=600&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=600&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=600&auto=format&fit=crop&q=80"
+      ],
+      "nationalIdOrLicense": "28405120102345",
+      "createdAt": "2026-01-05T09:00:00Z"
+    },
+    {
+      "id": "prov_2",
+      "userId": "usr_provider2",
+      "businessName": "الشافعي للكهرباء الهندسية والإنارة",
+      "bio": "فني كهرباء معتمد نقابياً، متخصص في إصلاح القفلات المعقدة، تأسيس شبكات المنازل، وتركيب ليد بروفايل والنجف الذكي. نستخدم أفضل خامات الكابلات والقواطع.",
+      "experienceYears": 11,
+      "rating": 4.85,
+      "reviewCount": 38,
+      "isVerified": true,
+      "isActive": true,
+      "categoryIds": [
+        "cat_electricity"
+      ],
+      "serviceIds": [
+        "srv_elec_short",
+        "srv_elec_lighting",
+        "srv_elec_wiring"
+      ],
+      "areaIds": [
+        "loc_nasr",
+        "loc_heliopolis",
+        "loc_tagamoa",
+        "loc_maadi"
+      ],
+      "workingHours": {
+        "start": "09:00",
+        "end": "23:00",
+        "daysOff": []
+      },
+      "workPhotos": [
+        "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=600&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=600&auto=format&fit=crop&q=80"
+      ],
+      "nationalIdOrLicense": "29011030104567",
+      "createdAt": "2026-01-06T10:00:00Z"
+    },
+    {
+      "id": "prov_3",
+      "userId": "usr_provider3",
+      "businessName": "الصياد إير كوندشنينج وتبريد",
+      "bio": "مركز متخصص في صيانة وغسيل جميع أنواع التكييفات (شارب، كاريير، إل جي، تورنيدو). شحن فريون أمريكي معتمد، فحص الكومبريسور وتسريب الغاز بضمان حقيقي.",
+      "experienceYears": 9,
+      "rating": 4.92,
+      "reviewCount": 56,
+      "isVerified": true,
+      "isActive": true,
+      "categoryIds": [
+        "cat_hvac"
+      ],
+      "serviceIds": [
+        "srv_hvac_freon",
+        "srv_hvac_cleaning",
+        "srv_hvac_moving"
+      ],
+      "areaIds": [
+        "loc_mohandessin",
+        "loc_dokki",
+        "loc_haram",
+        "loc_faisal",
+        "loc_zayed"
+      ],
+      "workingHours": {
+        "start": "10:00",
+        "end": "22:00",
+        "daysOff": []
+      },
+      "workPhotos": [
+        "https://images.unsplash.com/photo-1621905252507-b35492cc74b4?w=600&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=600&auto=format&fit=crop&q=80"
+      ],
+      "nationalIdOrLicense": "29302150107890",
+      "createdAt": "2026-01-07T11:00:00Z"
+    },
+    {
+      "id": "prov_4",
+      "userId": "usr_provider4",
+      "businessName": "ورشة عماد للأعمال الخشبية والموبيليا",
+      "bio": "نجار محترف لجميع أعمال صيانة وتصليح الأبواب والشبابيك، تركيب وتفصيل المطابخ الحديثة، وصيانة غرف النوم والدواليب السحاب وتغيير الكالونات والمفصلات.",
+      "experienceYears": 16,
+      "rating": 4.78,
+      "reviewCount": 29,
+      "isVerified": true,
+      "isActive": true,
+      "categoryIds": [
+        "cat_carpentry"
+      ],
+      "serviceIds": [
+        "srv_carp_locks",
+        "srv_carp_kitchen"
+      ],
+      "areaIds": [
+        "loc_dokki",
+        "loc_mohandessin",
+        "loc_agouza",
+        "loc_haram"
+      ],
+      "workingHours": {
+        "start": "09:00",
+        "end": "20:00",
+        "daysOff": [
+          "الأحد"
+        ]
+      },
+      "workPhotos": [
+        "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=600&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1538688525198-9b88f6f53126?w=600&auto=format&fit=crop&q=80"
+      ],
+      "nationalIdOrLicense": "28108190101122",
+      "createdAt": "2026-01-08T09:30:00Z"
+    },
+    {
+      "id": "prov_5",
+      "userId": "usr_provider5",
+      "businessName": "الجوهري للديكور والتشطيبات الحديثة",
+      "bio": "فريق نقاشة وديكورات عالية المستوى، خبرة في دهانات جوتن وورق الحائط 3D وبديل الرخام والخشب. التزام تام بنظافة المكان ودقة ميعاد التسليم.",
+      "experienceYears": 8,
+      "rating": 4.88,
+      "reviewCount": 34,
+      "isVerified": true,
+      "isActive": true,
+      "categoryIds": [
+        "cat_painting"
+      ],
+      "serviceIds": [
+        "srv_paint_apt",
+        "srv_paint_decor"
+      ],
+      "areaIds": [
+        "loc_nasr",
+        "loc_heliopolis",
+        "loc_tagamoa"
+      ],
+      "workingHours": {
+        "start": "08:30",
+        "end": "19:00",
+        "daysOff": [
+          "الجمعة"
+        ]
+      },
+      "workPhotos": [
+        "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=600&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1562259949-e8e7689d7828?w=600&auto=format&fit=crop&q=80"
+      ],
+      "nationalIdOrLicense": "29509200109988",
+      "createdAt": "2026-01-09T08:00:00Z"
+    },
+    {
+      "id": "prov_6",
+      "userId": "usr_provider6",
+      "businessName": "المركز الفني لصيانة الأجهزة المنزلية",
+      "bio": "صيانة فورية بالمنزل للغسالات الأوتوماتيك، الثلاجات والديب فريزر بقطع غيار أصلية وضمان كتابي معتمد. كشف فني دقيق وأمانة مهنية كاملة.",
+      "experienceYears": 12,
+      "rating": 4.75,
+      "reviewCount": 22,
+      "isVerified": true,
+      "isActive": true,
+      "categoryIds": [
+        "cat_appliances"
+      ],
+      "serviceIds": [
+        "srv_app_washing",
+        "srv_app_fridge"
+      ],
+      "areaIds": [
+        "loc_mohandessin",
+        "loc_dokki",
+        "loc_haram",
+        "loc_faisal",
+        "loc_zayed"
+      ],
+      "workingHours": {
+        "start": "10:00",
+        "end": "21:00",
+        "daysOff": []
+      },
+      "workPhotos": [
+        "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=600&auto=format&fit=crop&q=80"
+      ],
+      "nationalIdOrLicense": "28604110103344",
+      "createdAt": "2026-01-10T11:30:00Z"
+    },
+    {
+      "id": "prov_7",
+      "userId": "usr_provider7",
+      "businessName": "شركة النقاء لخدمات التنظيف الشامل",
+      "bio": "خدمات تنظيف احترافية للشقق والفلل والشركات، غسيل السجاد والأنتريهات بالبخار والتعقيم الصحي، عمالة مدربة وأحدث ماكينات التنظيف الإيطالية.",
+      "experienceYears": 7,
+      "rating": 4.95,
+      "reviewCount": 65,
+      "isVerified": true,
+      "isActive": true,
+      "categoryIds": [
+        "cat_cleaning"
+      ],
+      "serviceIds": [
+        "srv_clean_deep",
+        "srv_clean_sofa"
+      ],
+      "areaIds": [
+        "loc_tagamoa",
+        "loc_nasr",
+        "loc_heliopolis",
+        "loc_maadi",
+        "loc_dokki",
+        "loc_mohandessin"
+      ],
+      "workingHours": {
+        "start": "08:00",
+        "end": "20:00",
+        "daysOff": []
+      },
+      "workPhotos": [
+        "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac?w=600&auto=format&fit=crop&q=80"
+      ],
+      "nationalIdOrLicense": "سجل تجاري 104928",
+      "createdAt": "2026-01-11T12:00:00Z"
+    },
+    {
+      "id": "prov_8",
+      "userId": "usr_provider8",
+      "businessName": "الصقر لنقل العفش والموبيليا مع الونش",
+      "bio": "أسطول سيارات مغلقة لحماية الأثاث، ونش رفع هيدروليكي حتى الدور العشرين، فنيين نجارة وتكييف لفك وتركيب كل قطعة بأمان تام وتغليف كرتوني ممتاز.",
+      "experienceYears": 10,
+      "rating": 4.82,
+      "reviewCount": 48,
+      "isVerified": true,
+      "isActive": true,
+      "categoryIds": [
+        "cat_moving"
+      ],
+      "serviceIds": [
+        "srv_move_full",
+        "srv_move_pack"
+      ],
+      "areaIds": [
+        "loc_mohandessin",
+        "loc_dokki",
+        "loc_haram",
+        "loc_faisal",
+        "loc_nasr",
+        "loc_heliopolis",
+        "loc_tagamoa",
+        "loc_zayed",
+        "loc_maadi"
+      ],
+      "workingHours": {
+        "start": "07:00",
+        "end": "23:00",
+        "daysOff": []
+      },
+      "workPhotos": [
+        "https://images.unsplash.com/photo-1600518464441-9154a4dea21b?w=600&auto=format&fit=crop&q=80",
+        "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80"
+      ],
+      "nationalIdOrLicense": "سجل تجاري 882190",
+      "createdAt": "2026-01-12T13:00:00Z"
+    },
+    {
+      "id": "prov_9",
+      "userId": "usr_provider9",
+      "businessName": "خليل لخدمات السباكة والشبكات",
+      "bio": "فني سباكة متخصص في مضخات المياه الإيطالية، سخانات الغاز والكهرباء، وعزل وتصليح حمامات ومطابخ الشقق القديمة والجديدة بمهارة وسرعة استجابة.",
+      "experienceYears": 15,
+      "rating": 4.7,
+      "reviewCount": 19,
+      "isVerified": false,
+      "isActive": true,
+      "categoryIds": [
+        "cat_plumbing"
+      ],
+      "serviceIds": [
+        "srv_plumb_leaks",
+        "srv_plumb_mixers",
+        "srv_plumb_heaters"
+      ],
+      "areaIds": [
+        "loc_haram",
+        "loc_faisal",
+        "loc_dokki"
+      ],
+      "workingHours": {
+        "start": "09:00",
+        "end": "21:00",
+        "daysOff": [
+          "الجمعة"
+        ]
+      },
+      "workPhotos": [
+        "https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?w=600&auto=format&fit=crop&q=80"
+      ],
+      "nationalIdOrLicense": "28203020108899",
+      "createdAt": "2026-01-13T14:00:00Z"
+    },
+    {
+      "id": "prov_10",
+      "userId": "usr_provider10",
+      "businessName": "الصاوي للأعمال الكهربائية والسمارت هوم",
+      "bio": "مهندس تنفيذ وتركيب أنظمة سمارت هوم، لوحات تحكم وتوزيع، وإنارة ديكورية متميزة. سرعة في التلبية وخدمة طوارئ في نطاق مدينة نصر ومصر الجديدة.",
+      "experienceYears": 6,
+      "rating": 4.9,
+      "reviewCount": 25,
+      "isVerified": true,
+      "isActive": true,
+      "categoryIds": [
+        "cat_electricity"
+      ],
+      "serviceIds": [
+        "srv_elec_short",
+        "srv_elec_lighting"
+      ],
+      "areaIds": [
+        "loc_nasr",
+        "loc_heliopolis",
+        "loc_tagamoa"
+      ],
+      "workingHours": {
+        "start": "10:00",
+        "end": "23:00",
+        "daysOff": []
+      },
+      "workPhotos": [
+        "https://images.unsplash.com/photo-1517048676732-d65bc937f952?w=600&auto=format&fit=crop&q=80"
+      ],
+      "nationalIdOrLicense": "29810140106677",
+      "createdAt": "2026-01-14T15:00:00Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat_plumbing",
+      "nameAr": "سباكة",
+      "nameEn": "Plumbing",
+      "icon": "Wrench",
+      "slug": "plumbing",
+      "description": "صيانة وتأسيس شبكات المياه والصرف، تركيب الخلاطات والسخانات وكشف التسريبات",
+      "sortOrder": 1,
+      "isActive": true
+    },
+    {
+      "id": "cat_electricity",
+      "nameAr": "كهرباء",
+      "nameEn": "Electricity",
+      "icon": "Zap",
+      "slug": "electricity",
+      "description": "صيانة الأعطال الكهربائية، تركيب النجف والليدات، وتأسيس وتوصيل لوحات التوزيع",
+      "sortOrder": 2,
+      "isActive": true
+    },
+    {
+      "id": "cat_hvac",
+      "nameAr": "تكييف وتبريد",
+      "nameEn": "HVAC",
+      "icon": "Wind",
+      "slug": "hvac",
+      "description": "شحن فريون، غسيل وصيانة الوحدات الداخلية والخارجية، وفك ونقل التكييفات",
+      "sortOrder": 3,
+      "isActive": true
+    },
+    {
+      "id": "cat_carpentry",
+      "nameAr": "نجارة",
+      "nameEn": "Carpentry",
+      "icon": "Hammer",
+      "slug": "carpentry",
+      "description": "صيانة وتفصيل الأبواب والشبابيك، تركيب الكالونات وتصليح المطابخ وغرف النوم",
+      "sortOrder": 4,
+      "isActive": true
+    },
+    {
+      "id": "cat_painting",
+      "nameAr": "نقاشة ودهانات",
+      "nameEn": "Painting",
+      "icon": "Paintbrush",
+      "slug": "painting",
+      "description": "دهانات حديثة، معالجة الرطوبة والشروخ، تركيب ورق حائط وبديل الرخام والخشب",
+      "sortOrder": 5,
+      "isActive": true
+    },
+    {
+      "id": "cat_appliances",
+      "nameAr": "صيانة أجهزة منزلية",
+      "nameEn": "Home Appliances",
+      "icon": "Tv",
+      "slug": "appliances",
+      "description": "صيانة الغسالات الفول أوتوماتيك، الثلاجات، البوتاجازات، والميكروويف وقطع غيار أصلية",
+      "sortOrder": 6,
+      "isActive": true
+    },
+    {
+      "id": "cat_cleaning",
+      "nameAr": "تنظيف منزلي",
+      "nameEn": "Cleaning",
+      "icon": "Sparkles",
+      "slug": "cleaning",
+      "description": "تنظيف عميق للشقق والفلل، غسيل السجاد والأنتريهات بالبخار، والتعقيم الشامل",
+      "sortOrder": 7,
+      "isActive": true
+    },
+    {
+      "id": "cat_moving",
+      "nameAr": "نقل أثاث",
+      "nameEn": "Moving",
+      "icon": "Truck",
+      "slug": "moving",
+      "description": "سيارات نقل مجهزة، ونش هيدروليكي للأدوار المرتفعة، وفك وتغليف احترافي",
+      "sortOrder": 8,
+      "isActive": true
+    }
+  ],
+  "services": [
+    {
+      "id": "srv_plumb_leaks",
+      "categoryId": "cat_plumbing",
+      "nameAr": "كشف تسريبات المياه ومعالجة الصرف",
+      "description": "كشف إلكتروني لأماكن الرشح وعلاج التسريب بدون تكسير عشوائي",
+      "isActive": true
+    },
+    {
+      "id": "srv_plumb_mixers",
+      "categoryId": "cat_plumbing",
+      "nameAr": "تركيب وصيانة الخلاطات والدش وقواعد الحمام",
+      "description": "تغيير قلب الخلاط وتركيب مستلزمات الحمام والشطافات",
+      "isActive": true
+    },
+    {
+      "id": "srv_plumb_heaters",
+      "categoryId": "cat_plumbing",
+      "nameAr": "تركيب وصيانة السخانات والفلاتر والمضخات",
+      "description": "تركيب وتوصيل سخانات الغاز والكهرباء ومضخات الرفع ومحطات الفلاتر",
+      "isActive": true
+    },
+    {
+      "id": "srv_elec_short",
+      "categoryId": "cat_electricity",
+      "nameAr": "إصلاح قفلات وشورت الكهرباء المفاجئ",
+      "description": "تتبع الأعطال وعلاج القفلات وتغيير القواطع الأوتوماتيكية",
+      "isActive": true
+    },
+    {
+      "id": "srv_elec_lighting",
+      "categoryId": "cat_electricity",
+      "nameAr": "تركيب النجف والسبوتات وليد بروفايل",
+      "description": "توزيع الإضاءة العصرية وتثبيت أحدث أنواع الديكور الضوئي",
+      "isActive": true
+    },
+    {
+      "id": "srv_elec_wiring",
+      "categoryId": "cat_electricity",
+      "nameAr": "تأسيس وتجديد شبكات الكهرباء للشقق",
+      "description": "سحب أسلاك السويدي المعتمدة وتركيب المفاتيح والبرايز",
+      "isActive": true
+    },
+    {
+      "id": "srv_hvac_freon",
+      "categoryId": "cat_hvac",
+      "nameAr": "شحن فريون أصلي وكشف تسريب غاز التكييف",
+      "description": "شحن غاز R410A / R22 مع ضمان التبريد",
+      "isActive": true
+    },
+    {
+      "id": "srv_hvac_cleaning",
+      "categoryId": "cat_hvac",
+      "nameAr": "غسيل وصيانة دورية للتكييف بالضغط العالي",
+      "description": "تنظيف الفلاتر وسربنتينة الوحدة الخارجية للتخلص من الروائح وضعف التبريد",
+      "isActive": true
+    },
+    {
+      "id": "srv_hvac_moving",
+      "categoryId": "cat_hvac",
+      "nameAr": "فك ونقل وتركيب التكييفات بجميع القدرات",
+      "description": "فك احترافي بدون تسريب الفريون مع التمديدات النحاسية",
+      "isActive": true
+    },
+    {
+      "id": "srv_carp_locks",
+      "categoryId": "cat_carpentry",
+      "nameAr": "تركيب وصيانة الكالونات والمقابض والأبواب",
+      "description": "تغيير كالونات الأمان وضبط الأبواب المريحة والشبابيك",
+      "isActive": true
+    },
+    {
+      "id": "srv_carp_kitchen",
+      "categoryId": "cat_carpentry",
+      "nameAr": "صيانة وتعديل المطابخ والدواليب والسحابات",
+      "description": "تغيير المفصلات الهيدروليك وتعديل رخامات ومطابخ الخشب والخشمونيوم",
+      "isActive": true
+    },
+    {
+      "id": "srv_paint_apt",
+      "categoryId": "cat_painting",
+      "nameAr": "تشطيب ودهانات الشقق والفلل بأجود الخامات",
+      "description": "تأسيس معجون وسيلر وتشطيب دهانات سايبس وجوتن قابلة للغسيل",
+      "isActive": true
+    },
+    {
+      "id": "srv_paint_decor",
+      "categoryId": "cat_painting",
+      "nameAr": "ديكورات بديل الرخام وبديل الخشب وورق الحائط",
+      "description": "تركيب أحدث التكسيات الجدارية الديكورية مع الإضاءة المخفية",
+      "isActive": true
+    },
+    {
+      "id": "srv_app_washing",
+      "categoryId": "cat_appliances",
+      "nameAr": "صيانة الغسالات الفول أوتوماتيك وفوق أوتوماتيك",
+      "description": "علاج مشاكل الطرد، العصر، الكارتة، ورولمان البلي بقطع أصلية",
+      "isActive": true
+    },
+    {
+      "id": "srv_app_fridge",
+      "categoryId": "cat_appliances",
+      "nameAr": "صيانة الثلاجات والديب فريزر والنوفروست",
+      "description": "حل مشكلة عدم التبريد، شحن فريون، وتغيير الثرموستات والتايمر",
+      "isActive": true
+    },
+    {
+      "id": "srv_clean_deep",
+      "categoryId": "cat_cleaning",
+      "nameAr": "تنظيف عميق شامل للمنازل وما بعد التشطيب",
+      "description": "جلي وتلميع الأرضيات، تنظيف الشبابيك والمطابخ والحمامات بأجهزة حديثة",
+      "isActive": true
+    },
+    {
+      "id": "srv_clean_sofa",
+      "categoryId": "cat_cleaning",
+      "nameAr": "غسيل الأنتريهات والسجاد والمفروشات بالبخار",
+      "description": "إزالة البقع الصعبة وتعطير الأقمشة في مكانها مع التجفيف السريع",
+      "isActive": true
+    },
+    {
+      "id": "srv_move_full",
+      "categoryId": "cat_moving",
+      "nameAr": "نقل عفش شامل بالونش الهيدروليكي وسيارات مغلقة",
+      "description": "سيارات صندوقية مجهزة لحماية الأثاث من الأتربة والأمطار",
+      "isActive": true
+    },
+    {
+      "id": "srv_move_pack",
+      "categoryId": "cat_moving",
+      "nameAr": "تغليف احترافي للأثاث والتحف والزجاج مع الفك والتركيب",
+      "description": "استخدام كراتين مضلعة وبابلز واسترتش وفنيين نجارة وتكييف متخصصين",
+      "isActive": true
+    }
+  ],
+  "locations": [
+    {
+      "id": "loc_mohandessin",
+      "nameAr": "المهندسين",
+      "governorate": "الجيزة",
+      "city": "الجيزة",
+      "isActive": true
+    },
+    {
+      "id": "loc_dokki",
+      "nameAr": "الدقي",
+      "governorate": "الجيزة",
+      "city": "الجيزة",
+      "isActive": true
+    },
+    {
+      "id": "loc_agouza",
+      "nameAr": "العجوزة",
+      "governorate": "الجيزة",
+      "city": "الجيزة",
+      "isActive": true
+    },
+    {
+      "id": "loc_haram",
+      "nameAr": "الهرم",
+      "governorate": "الجيزة",
+      "city": "الجيزة",
+      "isActive": true
+    },
+    {
+      "id": "loc_faisal",
+      "nameAr": "فيصل",
+      "governorate": "الجيزة",
+      "city": "الجيزة",
+      "isActive": true
+    },
+    {
+      "id": "loc_nasr",
+      "nameAr": "مدينة نصر",
+      "governorate": "القاهرة",
+      "city": "القاهرة",
+      "isActive": true
+    },
+    {
+      "id": "loc_heliopolis",
+      "nameAr": "مصر الجديدة",
+      "governorate": "القاهرة",
+      "city": "القاهرة",
+      "isActive": true
+    },
+    {
+      "id": "loc_maadi",
+      "nameAr": "المعادي",
+      "governorate": "القاهرة",
+      "city": "القاهرة",
+      "isActive": true
+    },
+    {
+      "id": "loc_tagamoa",
+      "nameAr": "التجمع الخامس",
+      "governorate": "القاهرة",
+      "city": "القاهرة الجديدة",
+      "isActive": true
+    },
+    {
+      "id": "loc_zayed",
+      "nameAr": "الشيخ زايد",
+      "governorate": "الجيزة",
+      "city": "6 أكتوبر",
+      "isActive": true
+    }
+  ],
+  "providerServices": [
+    {
+      "id": "ps_1",
+      "providerId": "prov_1",
+      "serviceId": "srv_plumb_leaks",
+      "customDescription": "كشف تسريب بجهاز الفحص الألماني"
+    },
+    {
+      "id": "ps_2",
+      "providerId": "prov_1",
+      "serviceId": "srv_plumb_mixers",
+      "customDescription": "تركيب خلاطات جروهي وإيديال ستاندرد"
+    },
+    {
+      "id": "ps_3",
+      "providerId": "prov_1",
+      "serviceId": "srv_plumb_heaters",
+      "customDescription": "تركيب سخانات أوليمبيك وتورنيدو وفلاتر مياه 7 مراحل"
+    },
+    {
+      "id": "ps_4",
+      "providerId": "prov_2",
+      "serviceId": "srv_elec_short",
+      "customDescription": "إصلاح القفلات وحل مشكلة نزول المفتاح الرئيسي"
+    },
+    {
+      "id": "ps_5",
+      "providerId": "prov_2",
+      "serviceId": "srv_elec_lighting",
+      "customDescription": "تأسيس وتركيب شريط ليد بروفايل والاسبوتات"
+    },
+    {
+      "id": "ps_6",
+      "providerId": "prov_3",
+      "serviceId": "srv_hvac_freon",
+      "customDescription": "شحن فريون هندي وأمريكي مع كشف التسريب"
+    },
+    {
+      "id": "ps_7",
+      "providerId": "prov_3",
+      "serviceId": "srv_hvac_cleaning",
+      "customDescription": "غسيل داخلي وخارجي كامل بضغط الماء المعقم"
+    }
+  ],
+  "providerAvailabilities": [],
+  "bookings": [
+    {
+      "customerId": "cust_1",
+      "customerUserId": "usr_customer1",
+      "providerId": "prov_1",
+      "providerUserId": "usr_provider1",
+      "serviceId": "srv_plumb_leaks",
+      "locationId": "loc_mohandessin",
+      "problemDescription": "تسريب مياه في خلاط المطبخ والماسورة تحت الحوض",
+      "customerPhone": "01123456789",
+      "addressDetails": "شارع مصدق - الدقي - الدور 4 شقة 12",
+      "preferredDate": "2026-03-10",
+      "preferredTime": "مساءً (4 - 8)",
+      "urgency": "urgent",
+      "status": "COMPLETED",
+      "finalPrice": 400,
+      "commissionAmount": 40,
+      "providerEarnings": 360,
+      "id": "bk_58c8ab6b-8465-4383-b247-3467e50f6998",
+      "bookingNumber": "EGY-10039",
+      "createdAt": "2026-09-07T20:16:20.349Z",
+      "updatedAt": "2026-09-07T20:16:20.362Z"
+    },
+    {
+      "customerId": "cust_1",
+      "customerUserId": "usr_customer1",
+      "providerId": "prov_1",
+      "providerUserId": "usr_provider1",
+      "serviceId": "srv_plumb_leaks",
+      "locationId": "loc_mohandessin",
+      "problemDescription": "تسريب مياه في خلاط المطبخ والماسورة تحت الحوض",
+      "customerPhone": "01123456789",
+      "addressDetails": "شارع مصدق - الدقي - الدور 4 شقة 12",
+      "preferredDate": "2026-03-10",
+      "preferredTime": "مساءً (4 - 8)",
+      "urgency": "urgent",
+      "status": "COMPLETED",
+      "finalPrice": 400,
+      "commissionAmount": 40,
+      "providerEarnings": 360,
+      "id": "bk_400bcf0d-27d8-401e-b65f-08bb69ca7cf0",
+      "bookingNumber": "EGY-10038",
+      "createdAt": "2026-09-07T20:16:14.543Z",
+      "updatedAt": "2026-09-07T20:16:14.556Z"
+    },
+    {
+      "customerId": "cust_1",
+      "customerUserId": "usr_customer1",
+      "providerId": "prov_1",
+      "providerUserId": "usr_provider1",
+      "serviceId": "srv_plumb_leaks",
+      "locationId": "loc_mohandessin",
+      "problemDescription": "تسريب مياه في خلاط المطبخ والماسورة تحت الحوض",
+      "customerPhone": "01123456789",
+      "addressDetails": "شارع مصدق - الدقي - الدور 4 شقة 12",
+      "preferredDate": "2026-03-10",
+      "preferredTime": "مساءً (4 - 8)",
+      "urgency": "urgent",
+      "status": "COMPLETED",
+      "finalPrice": 400,
+      "commissionAmount": 40,
+      "providerEarnings": 360,
+      "id": "bk_ba33273f-50e2-4f35-924b-23c77c896b96",
+      "bookingNumber": "EGY-10037",
+      "createdAt": "2026-09-07T20:08:15.239Z",
+      "updatedAt": "2026-09-07T20:08:15.249Z"
+    },
+    {
+      "customerId": "cust_1",
+      "customerUserId": "usr_customer1",
+      "providerId": "prov_1",
+      "providerUserId": "usr_provider1",
+      "serviceId": "srv_plumb_leaks",
+      "locationId": "loc_mohandessin",
+      "problemDescription": "تسريب ماية",
+      "customerPhone": "01123456789",
+      "addressDetails": "شارع عباس العقاد - مدينة نصر",
+      "preferredDate": "",
+      "preferredTime": "صباحاً (10 - 2)",
+      "urgency": "normal",
+      "status": "COMPLETED",
+      "finalPrice": 500,
+      "commissionAmount": 50,
+      "providerEarnings": 450,
+      "id": "bk_c3760096-d76b-41b6-8c23-37e5a635fff3",
+      "bookingNumber": "EGY-10036",
+      "createdAt": "2026-09-07T20:02:02.456Z",
+      "updatedAt": "2026-09-07T20:02:34.868Z"
+    },
+    {
+      "customerId": "cust_1",
+      "customerUserId": "usr_customer1",
+      "providerId": "prov_1",
+      "providerUserId": "usr_provider1",
+      "serviceId": "srv_plumb_leaks",
+      "locationId": "loc_mohandessin",
+      "problemDescription": "تسريب مياه في خلاط المطبخ والماسورة تحت الحوض",
+      "customerPhone": "01123456789",
+      "addressDetails": "شارع مصدق - الدقي - الدور 4 شقة 12",
+      "preferredDate": "2026-03-10",
+      "preferredTime": "مساءً (4 - 8)",
+      "urgency": "urgent",
+      "status": "COMPLETED",
+      "finalPrice": 400,
+      "commissionAmount": 40,
+      "providerEarnings": 360,
+      "id": "bk_8503e8c9-096c-4e32-8853-4db1f486e25f",
+      "bookingNumber": "EGY-10035",
+      "createdAt": "2026-09-07T19:25:41.517Z",
+      "updatedAt": "2026-09-07T19:25:41.531Z"
+    },
+    {
+      "customerId": "cust_1",
+      "customerUserId": "usr_customer1",
+      "providerId": "prov_1",
+      "providerUserId": "usr_provider1",
+      "serviceId": "srv_plumb_leaks",
+      "locationId": "loc_mohandessin",
+      "problemDescription": "تسريب مياه في خلاط المطبخ والماسورة تحت الحوض",
+      "customerPhone": "01123456789",
+      "addressDetails": "شارع مصدق - الدقي - الدور 4 شقة 12",
+      "preferredDate": "2026-03-10",
+      "preferredTime": "مساءً (4 - 8)",
+      "urgency": "urgent",
+      "status": "COMPLETED",
+      "finalPrice": 400,
+      "commissionAmount": 40,
+      "providerEarnings": 360,
+      "id": "bk_30aa2d4e-1baa-496b-8bb4-a1abd68e5107",
+      "bookingNumber": "EGY-10034",
+      "createdAt": "2026-09-07T19:25:35.261Z",
+      "updatedAt": "2026-09-07T19:25:35.269Z"
+    },
+    {
+      "customerId": "cust_1",
+      "customerUserId": "usr_customer1",
+      "providerId": "prov_1",
+      "providerUserId": "usr_provider1",
+      "serviceId": "srv_plumb_leaks",
+      "locationId": "loc_mohandessin",
+      "problemDescription": "تسريب مياه في خلاط المطبخ والماسورة تحت الحوض",
+      "customerPhone": "01123456789",
+      "addressDetails": "شارع مصدق - الدقي - الدور 4 شقة 12",
+      "preferredDate": "2026-03-10",
+      "preferredTime": "مساءً (4 - 8)",
+      "urgency": "urgent",
+      "status": "COMPLETED",
+      "finalPrice": 400,
+      "commissionAmount": 40,
+      "providerEarnings": 360,
+      "id": "bk_b3d17196-efc6-4b71-85fe-75d5e780adea",
+      "bookingNumber": "EGY-10033",
+      "createdAt": "2026-09-07T19:25:18.119Z",
+      "updatedAt": "2026-09-07T19:25:18.127Z"
+    },
+    {
+      "customerId": "cust_1",
+      "customerUserId": "usr_customer1",
+      "providerId": "prov_1",
+      "providerUserId": "usr_provider1",
+      "serviceId": "srv_plumb_leaks",
+      "locationId": "loc_mohandessin",
+      "problemDescription": "تسريب مياه في خلاط المطبخ والماسورة تحت الحوض",
+      "customerPhone": "01123456789",
+      "addressDetails": "شارع مصدق - الدقي - الدور 4 شقة 12",
+      "preferredDate": "2026-03-10",
+      "preferredTime": "مساءً (4 - 8)",
+      "urgency": "urgent",
+      "status": "COMPLETED",
+      "finalPrice": 400,
+      "commissionAmount": 40,
+      "providerEarnings": 360,
+      "id": "bk_8e18c60c-f273-468f-bf49-4e2af2681ff7",
+      "bookingNumber": "EGY-10032",
+      "createdAt": "2026-09-07T19:17:34.008Z",
+      "updatedAt": "2026-09-07T19:17:34.024Z"
+    },
+    {
+      "id": "bk_demo_completed",
+      "bookingNumber": "EGY-10024",
+      "customerId": "cust_1",
+      "customerUserId": "usr_customer1",
+      "providerId": "prov_1",
+      "providerUserId": "usr_provider1",
+      "serviceId": "srv_plumb_mixers",
+      "locationId": "loc_dokki",
+      "problemDescription": "عندي خلاط المطبخ فيه تسريب مستمر من الأسفل ومحتاج تغيير قلب أو تغيير كامل مع فحص المحبس.",
+      "customerPhone": "01123456789",
+      "addressDetails": "شارع مصدق، برج الأطباء، الدور الخامس شقة 12",
+      "preferredDate": "2026-02-15",
+      "preferredTime": "مساءً (4 - 8)",
+      "urgency": "normal",
+      "status": "COMPLETED",
+      "finalPrice": 500,
+      "commissionAmount": 50,
+      "providerEarnings": 450,
+      "createdAt": "2026-02-14T10:00:00Z",
+      "updatedAt": "2026-02-15T18:30:00Z"
+    },
+    {
+      "id": "bk_demo_pending",
+      "bookingNumber": "EGY-10025",
+      "customerId": "cust_1",
+      "customerUserId": "usr_customer1",
+      "providerId": "prov_1",
+      "providerUserId": "usr_provider1",
+      "serviceId": "srv_plumb_heaters",
+      "locationId": "loc_dokki",
+      "problemDescription": "سخان الغاز فيه مشكلة في الإشعال الذاتي وضعف ضغط مياه ساخنة.",
+      "customerPhone": "01123456789",
+      "addressDetails": "شارع التحرير - أمام محطة مترو الدقي",
+      "preferredDate": "2026-03-10",
+      "preferredTime": "صباحاً (10 - 2)",
+      "urgency": "urgent",
+      "status": "PENDING",
+      "finalPrice": null,
+      "commissionAmount": null,
+      "providerEarnings": null,
+      "createdAt": "2026-03-07T08:00:00Z",
+      "updatedAt": "2026-03-07T08:00:00Z"
+    },
+    {
+      "id": "bk_demo_accepted",
+      "bookingNumber": "EGY-10026",
+      "customerId": "cust_2",
+      "customerUserId": "usr_customer2",
+      "providerId": "prov_1",
+      "providerUserId": "usr_provider1",
+      "serviceId": "srv_plumb_leaks",
+      "locationId": "loc_mohandessin",
+      "problemDescription": "رشح مياه في حائط الحمام المشترك مع الصالة ومحتاجين كشف إلكتروني لتحديد مكان العيب.",
+      "customerPhone": "01234567890",
+      "addressDetails": "شارع جامعة الدول العربية، خلف البنك الأهلي",
+      "preferredDate": "2026-03-08",
+      "preferredTime": "عصراً (2 - 5)",
+      "urgency": "nearest",
+      "status": "COMPLETED",
+      "finalPrice": 500,
+      "commissionAmount": 50,
+      "providerEarnings": 450,
+      "createdAt": "2026-03-06T15:00:00Z",
+      "updatedAt": "2026-09-07T20:02:43.547Z"
+    },
+    {
+      "id": "bk_demo_inprogress",
+      "bookingNumber": "EGY-10027",
+      "customerId": "cust_2",
+      "customerUserId": "usr_customer2",
+      "providerId": "prov_2",
+      "providerUserId": "usr_provider2",
+      "serviceId": "srv_elec_short",
+      "locationId": "loc_heliopolis",
+      "problemDescription": "انقطاع تام في كهرباء نصف الشقة والمفتاح الرئيسي يسقط عند التشغيل.",
+      "customerPhone": "01234567890",
+      "addressDetails": "شارع الحجاز - ميدان المحكمة",
+      "preferredDate": "2026-03-07",
+      "preferredTime": "صباحاً (9 - 12)",
+      "urgency": "urgent",
+      "status": "IN_PROGRESS",
+      "finalPrice": null,
+      "commissionAmount": null,
+      "providerEarnings": null,
+      "createdAt": "2026-03-07T07:30:00Z",
+      "updatedAt": "2026-03-07T09:15:00Z"
+    }
+  ],
+  "bookingStatusHistories": [
+    {
+      "id": "bsh_1",
+      "bookingId": "bk_demo_completed",
+      "fromStatus": null,
+      "toStatus": "PENDING",
+      "changedByUserId": "usr_customer1",
+      "reason": "إنشاء طلب حجز جديد",
+      "timestamp": "2026-02-14T10:00:00Z"
+    },
+    {
+      "id": "bsh_2",
+      "bookingId": "bk_demo_completed",
+      "fromStatus": "PENDING",
+      "toStatus": "ACCEPTED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم قبول الطلب والتواصل مع العميل لتأكيد الموعد",
+      "timestamp": "2026-02-14T11:00:00Z"
+    },
+    {
+      "id": "bsh_3",
+      "bookingId": "bk_demo_completed",
+      "fromStatus": "ACCEPTED",
+      "toStatus": "IN_PROGRESS",
+      "changedByUserId": "usr_provider1",
+      "reason": "الفني وصل وبدأ في صيانة خلاط المياه",
+      "timestamp": "2026-02-15T16:00:00Z"
+    },
+    {
+      "id": "bsh_4",
+      "bookingId": "bk_demo_completed",
+      "fromStatus": "IN_PROGRESS",
+      "toStatus": "COMPLETED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم إنهاء الصيانة بنجاح والاتفاق على السعر 500 ج.م",
+      "timestamp": "2026-02-15T18:30:00Z"
+    },
+    {
+      "id": "bsh_5",
+      "bookingId": "bk_demo_pending",
+      "fromStatus": null,
+      "toStatus": "PENDING",
+      "changedByUserId": "usr_customer1",
+      "reason": "إنشاء طلب حجز جديد",
+      "timestamp": "2026-03-07T08:00:00Z"
+    },
+    {
+      "id": "bsh_6",
+      "bookingId": "bk_demo_accepted",
+      "fromStatus": null,
+      "toStatus": "PENDING",
+      "changedByUserId": "usr_customer2",
+      "reason": "طلب جديد",
+      "timestamp": "2026-03-06T15:00:00Z"
+    },
+    {
+      "id": "bsh_7",
+      "bookingId": "bk_demo_accepted",
+      "fromStatus": "PENDING",
+      "toStatus": "ACCEPTED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم قبول الطلب والتنسيق مع الأستاذ طارق",
+      "timestamp": "2026-03-06T16:20:00Z"
+    },
+    {
+      "bookingId": "bk_8e18c60c-f273-468f-bf49-4e2af2681ff7",
+      "fromStatus": null,
+      "toStatus": "PENDING",
+      "changedByUserId": "usr_customer1",
+      "reason": "إنشاء طلب حجز جديد",
+      "id": "bsh_cbc4dcd4-61a0-43b3-83d3-662bd8b947e4",
+      "timestamp": "2026-09-07T19:17:34.008Z"
+    },
+    {
+      "bookingId": "bk_8e18c60c-f273-468f-bf49-4e2af2681ff7",
+      "fromStatus": "PENDING",
+      "toStatus": "ACCEPTED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم قبول الموعد وسيتم الحضور في الوقت المحدد",
+      "id": "bsh_54d79d99-4ada-4d12-86ea-fd89d75d86e8",
+      "timestamp": "2026-09-07T19:17:34.013Z"
+    },
+    {
+      "bookingId": "bk_8e18c60c-f273-468f-bf49-4e2af2681ff7",
+      "fromStatus": "ACCEPTED",
+      "toStatus": "IN_PROGRESS",
+      "changedByUserId": "usr_provider1",
+      "reason": "الفني وصل وبدأ الصيانة",
+      "id": "bsh_896cd067-5e86-47f5-907a-aedee1a60483",
+      "timestamp": "2026-09-07T19:17:34.021Z"
+    },
+    {
+      "bookingId": "bk_8e18c60c-f273-468f-bf49-4e2af2681ff7",
+      "fromStatus": "IN_PROGRESS",
+      "toStatus": "COMPLETED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم الإصلاح بنجاح وتم تحصيل 400 ج.م",
+      "id": "bsh_4a1afeb6-3fd6-409b-9c37-7304e30fd095",
+      "timestamp": "2026-09-07T19:17:34.024Z"
+    },
+    {
+      "bookingId": "bk_b3d17196-efc6-4b71-85fe-75d5e780adea",
+      "fromStatus": null,
+      "toStatus": "PENDING",
+      "changedByUserId": "usr_customer1",
+      "reason": "إنشاء طلب حجز جديد",
+      "id": "bsh_0dc86cd1-031b-49db-a345-cd543c54941f",
+      "timestamp": "2026-09-07T19:25:18.119Z"
+    },
+    {
+      "bookingId": "bk_b3d17196-efc6-4b71-85fe-75d5e780adea",
+      "fromStatus": "PENDING",
+      "toStatus": "ACCEPTED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم قبول الموعد وسيتم الحضور في الوقت المحدد",
+      "id": "bsh_9f977816-77af-4697-b51f-f7d143b502ae",
+      "timestamp": "2026-09-07T19:25:18.123Z"
+    },
+    {
+      "bookingId": "bk_b3d17196-efc6-4b71-85fe-75d5e780adea",
+      "fromStatus": "ACCEPTED",
+      "toStatus": "IN_PROGRESS",
+      "changedByUserId": "usr_provider1",
+      "reason": "الفني وصل وبدأ الصيانة",
+      "id": "bsh_95fb4d39-541e-4d25-83bf-15c3e83201fa",
+      "timestamp": "2026-09-07T19:25:18.124Z"
+    },
+    {
+      "bookingId": "bk_b3d17196-efc6-4b71-85fe-75d5e780adea",
+      "fromStatus": "IN_PROGRESS",
+      "toStatus": "COMPLETED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم الإصلاح بنجاح وتم تحصيل 400 ج.م",
+      "id": "bsh_b6a3e189-9529-4fd0-a47f-52e5a4ced6de",
+      "timestamp": "2026-09-07T19:25:18.127Z"
+    },
+    {
+      "bookingId": "bk_30aa2d4e-1baa-496b-8bb4-a1abd68e5107",
+      "fromStatus": null,
+      "toStatus": "PENDING",
+      "changedByUserId": "usr_customer1",
+      "reason": "إنشاء طلب حجز جديد",
+      "id": "bsh_275a9a26-0d6f-4df8-b3c5-372a0943a0fa",
+      "timestamp": "2026-09-07T19:25:35.261Z"
+    },
+    {
+      "bookingId": "bk_30aa2d4e-1baa-496b-8bb4-a1abd68e5107",
+      "fromStatus": "PENDING",
+      "toStatus": "ACCEPTED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم قبول الموعد وسيتم الحضور في الوقت المحدد",
+      "id": "bsh_8ebd0d7e-a1c4-49ab-8b7e-436f5231b055",
+      "timestamp": "2026-09-07T19:25:35.265Z"
+    },
+    {
+      "bookingId": "bk_30aa2d4e-1baa-496b-8bb4-a1abd68e5107",
+      "fromStatus": "ACCEPTED",
+      "toStatus": "IN_PROGRESS",
+      "changedByUserId": "usr_provider1",
+      "reason": "الفني وصل وبدأ الصيانة",
+      "id": "bsh_bbe02fa8-0d93-4496-873e-6079e07abc79",
+      "timestamp": "2026-09-07T19:25:35.267Z"
+    },
+    {
+      "bookingId": "bk_30aa2d4e-1baa-496b-8bb4-a1abd68e5107",
+      "fromStatus": "IN_PROGRESS",
+      "toStatus": "COMPLETED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم الإصلاح بنجاح وتم تحصيل 400 ج.م",
+      "id": "bsh_24847cfe-944c-40de-94f8-c59e519675e4",
+      "timestamp": "2026-09-07T19:25:35.269Z"
+    },
+    {
+      "bookingId": "bk_8503e8c9-096c-4e32-8853-4db1f486e25f",
+      "fromStatus": null,
+      "toStatus": "PENDING",
+      "changedByUserId": "usr_customer1",
+      "reason": "إنشاء طلب حجز جديد",
+      "id": "bsh_12699d29-f1dd-4792-8191-d4b0c5db354d",
+      "timestamp": "2026-09-07T19:25:41.517Z"
+    },
+    {
+      "bookingId": "bk_8503e8c9-096c-4e32-8853-4db1f486e25f",
+      "fromStatus": "PENDING",
+      "toStatus": "ACCEPTED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم قبول الموعد وسيتم الحضور في الوقت المحدد",
+      "id": "bsh_66e3d0e7-9dcf-4339-9772-4c988872b332",
+      "timestamp": "2026-09-07T19:25:41.526Z"
+    },
+    {
+      "bookingId": "bk_8503e8c9-096c-4e32-8853-4db1f486e25f",
+      "fromStatus": "ACCEPTED",
+      "toStatus": "IN_PROGRESS",
+      "changedByUserId": "usr_provider1",
+      "reason": "الفني وصل وبدأ الصيانة",
+      "id": "bsh_2cfabf10-0fd0-4ba1-ba42-7fcc830d4ae5",
+      "timestamp": "2026-09-07T19:25:41.528Z"
+    },
+    {
+      "bookingId": "bk_8503e8c9-096c-4e32-8853-4db1f486e25f",
+      "fromStatus": "IN_PROGRESS",
+      "toStatus": "COMPLETED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم الإصلاح بنجاح وتم تحصيل 400 ج.م",
+      "id": "bsh_2cfec1a2-0d59-4d97-bb55-2f7686da454b",
+      "timestamp": "2026-09-07T19:25:41.531Z"
+    },
+    {
+      "bookingId": "bk_c3760096-d76b-41b6-8c23-37e5a635fff3",
+      "fromStatus": null,
+      "toStatus": "PENDING",
+      "changedByUserId": "usr_customer1",
+      "reason": "إنشاء طلب حجز جديد",
+      "id": "bsh_e4483704-d3e6-414e-b7b7-2aa7fe082f9c",
+      "timestamp": "2026-09-07T20:02:02.456Z"
+    },
+    {
+      "bookingId": "bk_c3760096-d76b-41b6-8c23-37e5a635fff3",
+      "fromStatus": "PENDING",
+      "toStatus": "ACCEPTED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تغيير الحالة إلى ACCEPTED",
+      "id": "bsh_9fa919e5-aab9-4a94-9914-cdd346dd6d69",
+      "timestamp": "2026-09-07T20:02:22.171Z"
+    },
+    {
+      "bookingId": "bk_c3760096-d76b-41b6-8c23-37e5a635fff3",
+      "fromStatus": "ACCEPTED",
+      "toStatus": "COMPLETED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم إكمال العمل بنجاح وتسجيل السعر المتفق عليه (500 ج.م)",
+      "id": "bsh_52c222bc-a330-44bd-be4b-742cc27d8e35",
+      "timestamp": "2026-09-07T20:02:34.868Z"
+    },
+    {
+      "bookingId": "bk_demo_accepted",
+      "fromStatus": "ACCEPTED",
+      "toStatus": "COMPLETED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم إكمال العمل بنجاح وتسجيل السعر المتفق عليه (500 ج.م)",
+      "id": "bsh_58bce455-498c-499b-b0b3-dac2445d48cf",
+      "timestamp": "2026-09-07T20:02:43.548Z"
+    },
+    {
+      "bookingId": "bk_ba33273f-50e2-4f35-924b-23c77c896b96",
+      "fromStatus": null,
+      "toStatus": "PENDING",
+      "changedByUserId": "usr_customer1",
+      "reason": "إنشاء طلب حجز جديد",
+      "id": "bsh_3163bff5-3470-4f61-afbf-67ff7841a553",
+      "timestamp": "2026-09-07T20:08:15.239Z"
+    },
+    {
+      "bookingId": "bk_ba33273f-50e2-4f35-924b-23c77c896b96",
+      "fromStatus": "PENDING",
+      "toStatus": "ACCEPTED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم قبول الموعد وسيتم الحضور في الوقت المحدد",
+      "id": "bsh_bab1061c-3441-483b-ba22-6ec64c262483",
+      "timestamp": "2026-09-07T20:08:15.244Z"
+    },
+    {
+      "bookingId": "bk_ba33273f-50e2-4f35-924b-23c77c896b96",
+      "fromStatus": "ACCEPTED",
+      "toStatus": "IN_PROGRESS",
+      "changedByUserId": "usr_provider1",
+      "reason": "الفني وصل وبدأ الصيانة",
+      "id": "bsh_cceb5ad9-4095-45bb-b1b8-85cc08579f77",
+      "timestamp": "2026-09-07T20:08:15.246Z"
+    },
+    {
+      "bookingId": "bk_ba33273f-50e2-4f35-924b-23c77c896b96",
+      "fromStatus": "IN_PROGRESS",
+      "toStatus": "COMPLETED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم الإصلاح بنجاح وتم تحصيل 400 ج.م",
+      "id": "bsh_7a323003-be93-4fdc-add5-6d84318f8d78",
+      "timestamp": "2026-09-07T20:08:15.249Z"
+    },
+    {
+      "bookingId": "bk_400bcf0d-27d8-401e-b65f-08bb69ca7cf0",
+      "fromStatus": null,
+      "toStatus": "PENDING",
+      "changedByUserId": "usr_customer1",
+      "reason": "إنشاء طلب حجز جديد",
+      "id": "bsh_f33da5f9-80be-41f4-b628-e9b159fc574e",
+      "timestamp": "2026-09-07T20:16:14.543Z"
+    },
+    {
+      "bookingId": "bk_400bcf0d-27d8-401e-b65f-08bb69ca7cf0",
+      "fromStatus": "PENDING",
+      "toStatus": "ACCEPTED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم قبول الموعد وسيتم الحضور في الوقت المحدد",
+      "id": "bsh_1f14bd53-e25c-4cac-b935-cd810528548d",
+      "timestamp": "2026-09-07T20:16:14.548Z"
+    },
+    {
+      "bookingId": "bk_400bcf0d-27d8-401e-b65f-08bb69ca7cf0",
+      "fromStatus": "ACCEPTED",
+      "toStatus": "IN_PROGRESS",
+      "changedByUserId": "usr_provider1",
+      "reason": "الفني وصل وبدأ الصيانة",
+      "id": "bsh_b523aa95-8808-4b9e-b0c8-77e3c5a29e7d",
+      "timestamp": "2026-09-07T20:16:14.552Z"
+    },
+    {
+      "bookingId": "bk_400bcf0d-27d8-401e-b65f-08bb69ca7cf0",
+      "fromStatus": "IN_PROGRESS",
+      "toStatus": "COMPLETED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم الإصلاح بنجاح وتم تحصيل 400 ج.م",
+      "id": "bsh_cf0bb2b8-68e3-4fa9-a91a-1335c9cfc039",
+      "timestamp": "2026-09-07T20:16:14.556Z"
+    },
+    {
+      "bookingId": "bk_58c8ab6b-8465-4383-b247-3467e50f6998",
+      "fromStatus": null,
+      "toStatus": "PENDING",
+      "changedByUserId": "usr_customer1",
+      "reason": "إنشاء طلب حجز جديد",
+      "id": "bsh_29f1b358-c908-4471-b72c-a3e53217b5e1",
+      "timestamp": "2026-09-07T20:16:20.349Z"
+    },
+    {
+      "bookingId": "bk_58c8ab6b-8465-4383-b247-3467e50f6998",
+      "fromStatus": "PENDING",
+      "toStatus": "ACCEPTED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم قبول الموعد وسيتم الحضور في الوقت المحدد",
+      "id": "bsh_08c9b6b5-4439-4842-a136-26b139625407",
+      "timestamp": "2026-09-07T20:16:20.355Z"
+    },
+    {
+      "bookingId": "bk_58c8ab6b-8465-4383-b247-3467e50f6998",
+      "fromStatus": "ACCEPTED",
+      "toStatus": "IN_PROGRESS",
+      "changedByUserId": "usr_provider1",
+      "reason": "الفني وصل وبدأ الصيانة",
+      "id": "bsh_da0b8c37-14d0-4720-a74a-9ff949f8a7bc",
+      "timestamp": "2026-09-07T20:16:20.358Z"
+    },
+    {
+      "bookingId": "bk_58c8ab6b-8465-4383-b247-3467e50f6998",
+      "fromStatus": "IN_PROGRESS",
+      "toStatus": "COMPLETED",
+      "changedByUserId": "usr_provider1",
+      "reason": "تم الإصلاح بنجاح وتم تحصيل 400 ج.م",
+      "id": "bsh_2d04d87a-6799-4ae1-a43f-93e60ebb7fda",
+      "timestamp": "2026-09-07T20:16:20.362Z"
+    }
+  ],
+  "reviews": [
+    {
+      "id": "rev_40a78611-41ac-4e69-af06-e578be459340",
+      "bookingId": "bk_c3760096-d76b-41b6-8c23-37e5a635fff3",
+      "customerId": "cust_1",
+      "providerId": "prov_1",
+      "rating": 4,
+      "comment": "عاش عليك يا فنان",
+      "createdAt": "2026-09-07T20:03:36.368Z",
+      "customerName": "سارة أحمد حسن",
+      "customerAvatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80"
+    },
+    {
+      "id": "rev_5bcbafe1-39ce-45d7-9845-b8b7b8b39c47",
+      "bookingId": "bk_30aa2d4e-1baa-496b-8bb4-a1abd68e5107",
+      "customerId": "cust_1",
+      "providerId": "prov_1",
+      "rating": 5,
+      "comment": "شغل ممتاز جداً ومحترم وسريع في الميعاد",
+      "createdAt": "2026-09-07T19:25:35.271Z",
+      "customerName": "سارة أحمد حسن",
+      "customerAvatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80",
+      "providerReply": "شكراً لذوق حضرتك وتشرفنا بخدمتكم دائماً!",
+      "repliedAt": "2026-09-07T19:25:35.274Z"
+    },
+    {
+      "id": "rev_f62a45dc-e884-421b-ab9f-ccfc1f10a5a3",
+      "bookingId": "bk_b3d17196-efc6-4b71-85fe-75d5e780adea",
+      "customerId": "cust_1",
+      "providerId": "prov_1",
+      "rating": 5,
+      "comment": "شغل ممتاز جداً ومحترم وسريع في الميعاد",
+      "createdAt": "2026-09-07T19:25:18.128Z",
+      "customerName": "سارة أحمد حسن",
+      "customerAvatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80",
+      "providerReply": "شكراً لذوق حضرتك وتشرفنا بخدمتكم دائماً!",
+      "repliedAt": "2026-09-07T19:25:18.131Z"
+    },
+    {
+      "id": "rev_f005edbe-9663-4feb-bc34-d3fab5de04a3",
+      "bookingId": "bk_8e18c60c-f273-468f-bf49-4e2af2681ff7",
+      "customerId": "cust_1",
+      "providerId": "prov_1",
+      "rating": 5,
+      "comment": "شغل ممتاز جداً ومحترم وسريع في الميعاد",
+      "createdAt": "2026-09-07T19:17:34.026Z",
+      "customerName": "سارة أحمد حسن",
+      "customerAvatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80",
+      "providerReply": "شكراً لذوق حضرتك وتشرفنا بخدمتكم دائماً!",
+      "repliedAt": "2026-09-07T19:17:34.029Z"
+    },
+    {
+      "id": "rev_1",
+      "bookingId": "bk_demo_completed",
+      "customerId": "cust_1",
+      "providerId": "prov_1",
+      "rating": 5,
+      "comment": "ما شاء الله على الأسطى محمود، راجل محترم جداً ووصل في الميعاد بالظبط، حل مشكلة الخلاط وفحص باقي السباكة ونضف مكانه قبل ما يمشي، تسلم إيدك وبإذن الله هتعامل معاه دايماً.",
+      "providerReply": "شكراً جداً لحضرتك يا فندم وشهادة أعتز بيها، وتشرفت بخدمتكم في أي وقت!",
+      "repliedAt": "2026-02-16T10:00:00Z",
+      "createdAt": "2026-02-15T19:30:00Z",
+      "customerName": "سارة أحمد حسن",
+      "customerAvatar": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80"
+    },
+    {
+      "id": "rev_seed_2",
+      "bookingId": "bk_seed_historical_1",
+      "customerId": "cust_2",
+      "providerId": "prov_1",
+      "rating": 5,
+      "comment": "خبرة وأمانة في السعر وقطع الغيار، عمل كشف تسريب وفر علينا تكسير الحمام كله.",
+      "providerReply": "ألف شكر لحضرتك يا باشا، هدفنا دايماً راحة العميل وتوفير التكاليف الزيادة.",
+      "repliedAt": "2026-01-22T12:00:00Z",
+      "createdAt": "2026-01-21T18:00:00Z",
+      "customerName": "طارق عبد المنعم",
+      "customerAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80"
+    }
+  ],
+  "subscriptionPlans": [
+    {
+      "id": "plan_basic",
+      "nameAr": "الباقة الأساسية",
+      "pricePerMonth": 150,
+      "features": [
+        "إدراج الحساب في نتائج البحث بالمنطقة",
+        "استقبال حتى 15 طلب حجز شهرياً",
+        "لوحة تحكم لإدارة الحجوزات",
+        "نسبة عمولة المنصة 12%"
+      ],
+      "commissionRate": 0.12,
+      "maxBookingsPerMonth": 15,
+      "isPopular": false,
+      "isActive": true
+    },
+    {
+      "id": "plan_pro",
+      "nameAr": "باقة المحترفين (الأكثر طلباً)",
+      "pricePerMonth": 350,
+      "features": [
+        "ظهور مميز في الصفحة الرئيسية ومقدمة البحث",
+        "استقبال حجوزات غير محدودة شهرياً",
+        "شارة الفني الموثوق والمعتمد",
+        "تخفيض عمولة المنصة إلى 10%",
+        "إمكانية رفع صور أعمال غير محدودة في المعرض"
+      ],
+      "commissionRate": 0.1,
+      "maxBookingsPerMonth": 9999,
+      "isPopular": true,
+      "isActive": true
+    },
+    {
+      "id": "plan_elite",
+      "nameAr": "باقة النخبة والشركات",
+      "pricePerMonth": 700,
+      "features": [
+        "تغطية حتى 8 مناطق جغرافية في نفس الوقت",
+        "شارة التوثيق الذهبية للشركات والمراكز",
+        "أقل نسبة عمولة للمنصة 8% فقط",
+        "حجوزات غير محدودة وتنبيهات SMS فورية",
+        "مدير حساب ودعم فني مخصص 24/7"
+      ],
+      "commissionRate": 0.08,
+      "maxBookingsPerMonth": 9999,
+      "isPopular": false,
+      "isActive": true
+    }
+  ],
+  "providerSubscriptions": [
+    {
+      "id": "sub_1",
+      "providerId": "prov_1",
+      "planId": "plan_pro",
+      "status": "active",
+      "startDate": "2026-01-01T00:00:00Z",
+      "endDate": "2026-12-31T23:59:59Z",
+      "autoRenew": true
+    },
+    {
+      "id": "sub_2",
+      "providerId": "prov_2",
+      "planId": "plan_pro",
+      "status": "active",
+      "startDate": "2026-01-01T00:00:00Z",
+      "endDate": "2026-12-31T23:59:59Z",
+      "autoRenew": true
+    },
+    {
+      "id": "sub_3",
+      "providerId": "prov_3",
+      "planId": "plan_basic",
+      "status": "active",
+      "startDate": "2026-02-01T00:00:00Z",
+      "endDate": "2026-03-01T23:59:59Z",
+      "autoRenew": true
+    }
+  ],
+  "commissions": [
+    {
+      "id": "comm_ae0733a6-92ee-4770-a425-0cfd28454770",
+      "bookingId": "bk_58c8ab6b-8465-4383-b247-3467e50f6998",
+      "providerId": "prov_1",
+      "totalBookingAmount": 400,
+      "commissionRate": 0.1,
+      "commissionAmount": 40,
+      "providerPayout": 360,
+      "status": "collected",
+      "createdAt": "2026-09-07T20:16:20.362Z",
+      "bookingNumber": "EGY-10039",
+      "providerName": "الأسطى محمود للسباكة الحديثة"
+    },
+    {
+      "id": "comm_abf34cea-f71b-4939-a16c-aaf5a24ecb49",
+      "bookingId": "bk_400bcf0d-27d8-401e-b65f-08bb69ca7cf0",
+      "providerId": "prov_1",
+      "totalBookingAmount": 400,
+      "commissionRate": 0.1,
+      "commissionAmount": 40,
+      "providerPayout": 360,
+      "status": "collected",
+      "createdAt": "2026-09-07T20:16:14.556Z",
+      "bookingNumber": "EGY-10038",
+      "providerName": "الأسطى محمود للسباكة الحديثة"
+    },
+    {
+      "id": "comm_772887b0-ff4c-4f72-8893-4f50df52d133",
+      "bookingId": "bk_ba33273f-50e2-4f35-924b-23c77c896b96",
+      "providerId": "prov_1",
+      "totalBookingAmount": 400,
+      "commissionRate": 0.1,
+      "commissionAmount": 40,
+      "providerPayout": 360,
+      "status": "collected",
+      "createdAt": "2026-09-07T20:08:15.249Z",
+      "bookingNumber": "EGY-10037",
+      "providerName": "الأسطى محمود للسباكة الحديثة"
+    },
+    {
+      "id": "comm_95ca283d-18f0-4ef4-9839-729c26866997",
+      "bookingId": "bk_demo_accepted",
+      "providerId": "prov_1",
+      "totalBookingAmount": 500,
+      "commissionRate": 0.1,
+      "commissionAmount": 50,
+      "providerPayout": 450,
+      "status": "collected",
+      "createdAt": "2026-09-07T20:02:43.547Z",
+      "bookingNumber": "EGY-10026",
+      "providerName": "الأسطى محمود للسباكة الحديثة"
+    },
+    {
+      "id": "comm_fb36da95-0173-4101-9d5f-ca9fcd892cbf",
+      "bookingId": "bk_c3760096-d76b-41b6-8c23-37e5a635fff3",
+      "providerId": "prov_1",
+      "totalBookingAmount": 500,
+      "commissionRate": 0.1,
+      "commissionAmount": 50,
+      "providerPayout": 450,
+      "status": "collected",
+      "createdAt": "2026-09-07T20:02:34.868Z",
+      "bookingNumber": "EGY-10036",
+      "providerName": "الأسطى محمود للسباكة الحديثة"
+    },
+    {
+      "id": "comm_6c9532a3-64f8-4b40-83fd-c944bc6ee7fd",
+      "bookingId": "bk_8503e8c9-096c-4e32-8853-4db1f486e25f",
+      "providerId": "prov_1",
+      "totalBookingAmount": 400,
+      "commissionRate": 0.1,
+      "commissionAmount": 40,
+      "providerPayout": 360,
+      "status": "collected",
+      "createdAt": "2026-09-07T19:25:41.531Z",
+      "bookingNumber": "EGY-10035",
+      "providerName": "الأسطى محمود للسباكة الحديثة"
+    },
+    {
+      "id": "comm_933630bc-1c1c-4c63-81a0-496d346da27a",
+      "bookingId": "bk_30aa2d4e-1baa-496b-8bb4-a1abd68e5107",
+      "providerId": "prov_1",
+      "totalBookingAmount": 400,
+      "commissionRate": 0.1,
+      "commissionAmount": 40,
+      "providerPayout": 360,
+      "status": "collected",
+      "createdAt": "2026-09-07T19:25:35.269Z",
+      "bookingNumber": "EGY-10034",
+      "providerName": "الأسطى محمود للسباكة الحديثة"
+    },
+    {
+      "id": "comm_5aefed3c-92b0-48db-ad17-e03d8d6c31c7",
+      "bookingId": "bk_b3d17196-efc6-4b71-85fe-75d5e780adea",
+      "providerId": "prov_1",
+      "totalBookingAmount": 400,
+      "commissionRate": 0.1,
+      "commissionAmount": 40,
+      "providerPayout": 360,
+      "status": "collected",
+      "createdAt": "2026-09-07T19:25:18.127Z",
+      "bookingNumber": "EGY-10033",
+      "providerName": "الأسطى محمود للسباكة الحديثة"
+    },
+    {
+      "id": "comm_c3b79c30-10e9-455e-a35f-2aefdf2ea42a",
+      "bookingId": "bk_8e18c60c-f273-468f-bf49-4e2af2681ff7",
+      "providerId": "prov_1",
+      "totalBookingAmount": 400,
+      "commissionRate": 0.1,
+      "commissionAmount": 40,
+      "providerPayout": 360,
+      "status": "collected",
+      "createdAt": "2026-09-07T19:17:34.024Z",
+      "bookingNumber": "EGY-10032",
+      "providerName": "الأسطى محمود للسباكة الحديثة"
+    },
+    {
+      "id": "comm_1",
+      "bookingId": "bk_demo_completed",
+      "providerId": "prov_1",
+      "totalBookingAmount": 500,
+      "commissionRate": 0.1,
+      "commissionAmount": 50,
+      "providerPayout": 450,
+      "status": "collected",
+      "createdAt": "2026-02-15T18:30:00Z",
+      "bookingNumber": "EGY-10024",
+      "providerName": "الأسطى محمود للسباكة الحديثة"
+    }
+  ],
+  "notifications": [
+    {
+      "userId": "usr_customer1",
+      "title": "رد من مقدم الخدمة 💬",
+      "message": "قام الأسطى محمود للسباكة الحديثة بالرد على تقييمك.",
+      "type": "review_new",
+      "link": "/customer/bookings",
+      "id": "notif_cd75bd4a-8153-441b-b03e-857bc4dbe228",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:16:20.373Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "تقييم جديد لرصيدك ⭐",
+      "message": "حصلت على تقييم جديد (5 نجوم) من سارة أحمد حسن.",
+      "type": "review_new",
+      "link": "/provider/reviews",
+      "id": "notif_39e068a5-3027-4785-bcad-ec57d3d1e359",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:16:20.368Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "اكتملت الخدمة بنجاح ✅",
+      "message": "تم إنهاء الحجز رقم EGY-10039. تم تسجيل السعر النهائي 400 ج.م. يسعدنا تقييمك لمقدم الخدمة!",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_7e874dae-5df4-4277-8bd4-36ea5f98645e",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:16:20.362Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تحديث في حجزك EGY-10039",
+      "message": "قام مقدم الخدمة بتحديث حالة الحجز إلى: IN_PROGRESS",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_d602a300-a7a2-45e6-b6df-a8139fab9c4b",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:16:20.358Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تم قبول طلب الحجز 🎉",
+      "message": "وافق مقدم الخدمة على طلبك رقم EGY-10039.",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_c73fadb2-f5e6-47c8-ab09-792de5bf9a7f",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:16:20.355Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "طلب حجز جديد 🛎️",
+      "message": "وصلك طلب حجز جديد برقم EGY-10039 للخدمة المطلوبة.",
+      "type": "booking_new",
+      "link": "/provider/bookings",
+      "id": "notif_83936d14-65d5-48bb-a493-413a9e54e696",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:16:20.349Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "رد من مقدم الخدمة 💬",
+      "message": "قام الأسطى محمود للسباكة الحديثة بالرد على تقييمك.",
+      "type": "review_new",
+      "link": "/customer/bookings",
+      "id": "notif_a9145d31-e1a5-402e-9790-f4bf1696b082",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:16:14.564Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "تقييم جديد لرصيدك ⭐",
+      "message": "حصلت على تقييم جديد (5 نجوم) من سارة أحمد حسن.",
+      "type": "review_new",
+      "link": "/provider/reviews",
+      "id": "notif_92f5dc8e-e5ab-4d8f-8fdb-f8593353135b",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:16:14.560Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "اكتملت الخدمة بنجاح ✅",
+      "message": "تم إنهاء الحجز رقم EGY-10038. تم تسجيل السعر النهائي 400 ج.م. يسعدنا تقييمك لمقدم الخدمة!",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_c124b9d8-b1b3-46c4-ae58-3d557e8d17c8",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:16:14.556Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تحديث في حجزك EGY-10038",
+      "message": "قام مقدم الخدمة بتحديث حالة الحجز إلى: IN_PROGRESS",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_c501f194-1beb-4530-bf0b-f17b5460e1b3",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:16:14.552Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تم قبول طلب الحجز 🎉",
+      "message": "وافق مقدم الخدمة على طلبك رقم EGY-10038.",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_ff2bd5d8-2f39-4971-b993-6f16cea11496",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:16:14.548Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "طلب حجز جديد 🛎️",
+      "message": "وصلك طلب حجز جديد برقم EGY-10038 للخدمة المطلوبة.",
+      "type": "booking_new",
+      "link": "/provider/bookings",
+      "id": "notif_941a0908-128e-44f0-884b-3e8a4f89289a",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:16:14.543Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "رد من مقدم الخدمة 💬",
+      "message": "قام الأسطى محمود للسباكة الحديثة بالرد على تقييمك.",
+      "type": "review_new",
+      "link": "/customer/bookings",
+      "id": "notif_1a72fefe-3442-4dc2-8353-875d1c9be3c1",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:08:15.260Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "تقييم جديد لرصيدك ⭐",
+      "message": "حصلت على تقييم جديد (5 نجوم) من سارة أحمد حسن.",
+      "type": "review_new",
+      "link": "/provider/reviews",
+      "id": "notif_055115e6-da7f-4617-8c06-9c8cf5437818",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:08:15.258Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "اكتملت الخدمة بنجاح ✅",
+      "message": "تم إنهاء الحجز رقم EGY-10037. تم تسجيل السعر النهائي 400 ج.م. يسعدنا تقييمك لمقدم الخدمة!",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_4b210751-bde6-40fe-8bff-99db5e271c05",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:08:15.249Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تحديث في حجزك EGY-10037",
+      "message": "قام مقدم الخدمة بتحديث حالة الحجز إلى: IN_PROGRESS",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_1df93c8a-234b-4ada-9ea1-9ecf5b82b28b",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:08:15.246Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تم قبول طلب الحجز 🎉",
+      "message": "وافق مقدم الخدمة على طلبك رقم EGY-10037.",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_69ad0160-a561-44c8-9d42-e96921a19063",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:08:15.244Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "طلب حجز جديد 🛎️",
+      "message": "وصلك طلب حجز جديد برقم EGY-10037 للخدمة المطلوبة.",
+      "type": "booking_new",
+      "link": "/provider/bookings",
+      "id": "notif_a9f39c1a-69b2-4ac3-b375-edd8fca8ad90",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:08:15.239Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "تقييم جديد لرصيدك ⭐",
+      "message": "حصلت على تقييم جديد (4 نجوم) من سارة أحمد حسن.",
+      "type": "review_new",
+      "link": "/provider/reviews",
+      "id": "notif_862c979b-c994-496e-8a7e-a698ecb6e52b",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:03:36.369Z"
+    },
+    {
+      "userId": "usr_customer2",
+      "title": "اكتملت الخدمة بنجاح ✅",
+      "message": "تم إنهاء الحجز رقم EGY-10026. تم تسجيل السعر النهائي 500 ج.م. يسعدنا تقييمك لمقدم الخدمة!",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_5c16adae-4ec7-4c58-b7a5-767eeeb61622",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:02:43.548Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "اكتملت الخدمة بنجاح ✅",
+      "message": "تم إنهاء الحجز رقم EGY-10036. تم تسجيل السعر النهائي 500 ج.م. يسعدنا تقييمك لمقدم الخدمة!",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_2cf4651d-42e2-4c17-a9e8-5f8e0119591b",
+      "isRead": true,
+      "createdAt": "2026-09-07T20:02:34.868Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تم قبول طلب الحجز 🎉",
+      "message": "وافق مقدم الخدمة على طلبك رقم EGY-10036.",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_5b7d3467-0263-4c8c-bd5c-f4ef599ad300",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:02:22.171Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "طلب حجز جديد 🛎️",
+      "message": "وصلك طلب حجز جديد برقم EGY-10036 للخدمة المطلوبة.",
+      "type": "booking_new",
+      "link": "/provider/bookings",
+      "id": "notif_e547819b-8f3e-4b7f-bfbc-fd7b69261648",
+      "isRead": false,
+      "createdAt": "2026-09-07T20:02:02.456Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "رد من مقدم الخدمة 💬",
+      "message": "قام الأسطى محمود للسباكة الحديثة بالرد على تقييمك.",
+      "type": "review_new",
+      "link": "/customer/bookings",
+      "id": "notif_900bab4d-0cd8-4d1c-bd52-d7cff7e8ca5f",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:41.536Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "تقييم جديد لرصيدك ⭐",
+      "message": "حصلت على تقييم جديد (5 نجوم) من سارة أحمد حسن.",
+      "type": "review_new",
+      "link": "/provider/reviews",
+      "id": "notif_40f0fcd5-32c9-4a9d-ba75-1b1c4a221af5",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:41.534Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "اكتملت الخدمة بنجاح ✅",
+      "message": "تم إنهاء الحجز رقم EGY-10035. تم تسجيل السعر النهائي 400 ج.م. يسعدنا تقييمك لمقدم الخدمة!",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_cd1dd7f4-5e8b-4ce9-8811-c6e8bb200ec8",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:41.531Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تحديث في حجزك EGY-10035",
+      "message": "قام مقدم الخدمة بتحديث حالة الحجز إلى: IN_PROGRESS",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_79d195cd-b27a-47f1-b238-5554ab7da786",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:41.528Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تم قبول طلب الحجز 🎉",
+      "message": "وافق مقدم الخدمة على طلبك رقم EGY-10035.",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_3e33d404-860c-43ef-bd48-c66ea951c974",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:41.526Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "طلب حجز جديد 🛎️",
+      "message": "وصلك طلب حجز جديد برقم EGY-10035 للخدمة المطلوبة.",
+      "type": "booking_new",
+      "link": "/provider/bookings",
+      "id": "notif_ceb37af7-d958-414b-a9cc-e81f0632f313",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:41.517Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "رد من مقدم الخدمة 💬",
+      "message": "قام الأسطى محمود للسباكة الحديثة بالرد على تقييمك.",
+      "type": "review_new",
+      "link": "/customer/bookings",
+      "id": "notif_37a12be6-0f82-4ab8-bf08-6caf1c78c5cb",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:35.274Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "تقييم جديد لرصيدك ⭐",
+      "message": "حصلت على تقييم جديد (5 نجوم) من سارة أحمد حسن.",
+      "type": "review_new",
+      "link": "/provider/reviews",
+      "id": "notif_bc30e618-2813-4cb4-ac77-c31f5c5df373",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:35.272Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "اكتملت الخدمة بنجاح ✅",
+      "message": "تم إنهاء الحجز رقم EGY-10034. تم تسجيل السعر النهائي 400 ج.م. يسعدنا تقييمك لمقدم الخدمة!",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_307fb5d1-f447-4b94-8654-95e143200ed7",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:35.269Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تحديث في حجزك EGY-10034",
+      "message": "قام مقدم الخدمة بتحديث حالة الحجز إلى: IN_PROGRESS",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_9b1fcc63-fb2e-4865-aeb5-67b5fe289b4b",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:35.267Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تم قبول طلب الحجز 🎉",
+      "message": "وافق مقدم الخدمة على طلبك رقم EGY-10034.",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_c1de92b5-d99c-40fe-8129-ee30e709fa38",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:35.265Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "طلب حجز جديد 🛎️",
+      "message": "وصلك طلب حجز جديد برقم EGY-10034 للخدمة المطلوبة.",
+      "type": "booking_new",
+      "link": "/provider/bookings",
+      "id": "notif_0eba2ce1-407e-4ed2-8909-49d47ec090e4",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:35.261Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "رد من مقدم الخدمة 💬",
+      "message": "قام الأسطى محمود للسباكة الحديثة بالرد على تقييمك.",
+      "type": "review_new",
+      "link": "/customer/bookings",
+      "id": "notif_9bc19d3d-ada4-490c-9ab0-d9cdb64c144b",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:18.131Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "تقييم جديد لرصيدك ⭐",
+      "message": "حصلت على تقييم جديد (5 نجوم) من سارة أحمد حسن.",
+      "type": "review_new",
+      "link": "/provider/reviews",
+      "id": "notif_e53f2197-dc57-41c2-a682-5d44faf34b7c",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:18.129Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "اكتملت الخدمة بنجاح ✅",
+      "message": "تم إنهاء الحجز رقم EGY-10033. تم تسجيل السعر النهائي 400 ج.م. يسعدنا تقييمك لمقدم الخدمة!",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_36a4dd15-0597-4c8d-bb9d-50a1ea52a46d",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:18.127Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تحديث في حجزك EGY-10033",
+      "message": "قام مقدم الخدمة بتحديث حالة الحجز إلى: IN_PROGRESS",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_789ffcbe-1f66-4877-9b80-e7caaba3c1c3",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:18.124Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تم قبول طلب الحجز 🎉",
+      "message": "وافق مقدم الخدمة على طلبك رقم EGY-10033.",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_c157cef6-b051-4154-9f87-32b1a4cb8826",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:18.123Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "طلب حجز جديد 🛎️",
+      "message": "وصلك طلب حجز جديد برقم EGY-10033 للخدمة المطلوبة.",
+      "type": "booking_new",
+      "link": "/provider/bookings",
+      "id": "notif_f6f35f52-4449-4467-b45d-18d8deb42c2a",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:25:18.119Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "رد من مقدم الخدمة 💬",
+      "message": "قام الأسطى محمود للسباكة الحديثة بالرد على تقييمك.",
+      "type": "review_new",
+      "link": "/customer/bookings",
+      "id": "notif_b31474a4-02d2-4426-8521-cf87b349064f",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:17:34.029Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "تقييم جديد لرصيدك ⭐",
+      "message": "حصلت على تقييم جديد (5 نجوم) من سارة أحمد حسن.",
+      "type": "review_new",
+      "link": "/provider/reviews",
+      "id": "notif_3347c6a4-6d68-4083-88bf-4ef23fb5108b",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:17:34.027Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "اكتملت الخدمة بنجاح ✅",
+      "message": "تم إنهاء الحجز رقم EGY-10032. تم تسجيل السعر النهائي 400 ج.م. يسعدنا تقييمك لمقدم الخدمة!",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_08414293-e59b-427a-8ce7-be0edcabd385",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:17:34.024Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تحديث في حجزك EGY-10032",
+      "message": "قام مقدم الخدمة بتحديث حالة الحجز إلى: IN_PROGRESS",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_83e66cf2-1f21-4afb-8bb5-79d5610bd292",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:17:34.021Z"
+    },
+    {
+      "userId": "usr_customer1",
+      "title": "تم قبول طلب الحجز 🎉",
+      "message": "وافق مقدم الخدمة على طلبك رقم EGY-10032.",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "id": "notif_9a5b7617-baf2-4049-a0db-8f8168244fd0",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:17:34.013Z"
+    },
+    {
+      "userId": "usr_provider1",
+      "title": "طلب حجز جديد 🛎️",
+      "message": "وصلك طلب حجز جديد برقم EGY-10032 للخدمة المطلوبة.",
+      "type": "booking_new",
+      "link": "/provider/bookings",
+      "id": "notif_cbb9cd8b-87f6-427b-a9dc-7a60b4a4be97",
+      "isRead": false,
+      "createdAt": "2026-09-07T19:17:34.008Z"
+    },
+    {
+      "id": "notif_1",
+      "userId": "usr_provider1",
+      "title": "طلب حجز جديد 🔔",
+      "message": "وصلك طلب حجز جديد لصيانة سخان في الدقي من العميل سارة أحمد (حجز رقم EGY-10025).",
+      "type": "booking_new",
+      "link": "/provider/bookings",
+      "isRead": false,
+      "createdAt": "2026-03-07T08:00:00Z"
+    },
+    {
+      "id": "notif_2",
+      "userId": "usr_customer1",
+      "title": "تقييم الخدمة المكتملة ⭐",
+      "message": "شكراً لتعاملك مع سوق الخدمات المصرية! تم اكتمال حجزك مع الأسطى محمود، يمكنك الآن كتابة تقييمك للخدمة.",
+      "type": "booking_status",
+      "link": "/customer/bookings",
+      "isRead": true,
+      "createdAt": "2026-02-15T18:35:00Z"
+    }
+  ]
+}

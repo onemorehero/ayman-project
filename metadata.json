@@ -1,0 +1,7 @@
+{
+  "name": "سوق الخدمات المصرية",
+  "description": "منصة مصرية متكاملة لربط العملاء بأفضل الفنيين ومقدمي الخدمات المنزلية والحرفية في مختلف المناطق",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
