@@ -31,7 +31,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers['x-user-id'] = currentUserId;
   }
 
-  const res = await fetch(path, {
+  // Support custom backend URL (if specified in VITE_API_BASE_URL) or default to relative path (/api/...)
+  const baseUrl = ((import.meta as any).env?.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, '') || '';
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const targetUrl = `${baseUrl}${cleanPath}`;
+
+  const res = await fetch(targetUrl, {
     ...options,
     headers
   });
@@ -45,6 +50,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       // ignore
     }
     throw new Error(errorMsg);
+  }
+
+  // Prevent parsing HTML pages as JSON when SPA fallback happens
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text();
+    if (text.trim().startsWith('<!doctype') || text.trim().startsWith('<html')) {
+      throw new Error('تعذر الوصول إلى الـ API (تم استلام صفحة HTML بدلاً من JSON). يرجى التأكد من توجيهات vercel.json أو ملف api/index.ts');
+    }
+    throw new Error('استجابة غير متوقعة من الخادم');
   }
 
   return res.json();
