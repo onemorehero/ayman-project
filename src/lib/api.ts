@@ -753,7 +753,7 @@ export const api = {
       photo_url: data.photoUrl || null,
       lat: data.lat || null,
       lng: data.lng || null,
-      status: 'pending',
+      status: 'PENDING',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -843,7 +843,7 @@ export const api = {
       });
     }
 
-    const statusForDb = (status || '').toString().toLowerCase();
+    const statusForDb = (status || '').toString().toUpperCase();
     const updatePayload: Record<string, any> = {
       status: statusForDb,
       updated_at: new Date().toISOString()
@@ -900,7 +900,7 @@ export const api = {
     const { data: updatedBooking, error: bookingErr } = await supabase
       .from('bookings')
       .update({
-        status: 'completed',
+        status: 'COMPLETED',
         final_price: data.finalPrice,
         commission_amount: commissionAmount,
         provider_earnings: providerEarnings,
