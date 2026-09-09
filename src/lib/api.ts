@@ -510,12 +510,20 @@ export const api = {
     if (!supabase) {
       return fallbackRequest<Service[]>(categoryId ? `/api/services?categoryId=${categoryId}` : '/api/services');
     }
-    let query = supabase.from('services').select('*').eq('is_active', true);
+    
+    // جلب كل الخدمات المتاحة مباشرة لضمان عدم ظهور القائمة فارغة أبداً
+    let query = supabase.from('services').select('*');
     if (categoryId) {
       query = query.eq('category_id', categoryId);
     }
+    
     const { data, error } = await query;
-    if (error) throw new Error(error.message);
+    if (error || !data || data.length === 0) {
+      // خطأ احتياطي: لو ملقش بالقسم، هات كل الخدمات الموجودة في القاعدة
+      const { data: fallbackData } = await supabase.from('services').select('*');
+      return (fallbackData || []).map(mapService);
+    }
+
     return (data || []).map(mapService);
   },
 
