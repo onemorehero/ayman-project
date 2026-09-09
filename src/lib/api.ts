@@ -17,7 +17,7 @@ import type {
 } from '../types.js';
 
 // ====================================================================
-// SUPABASE CLIENT INITIALIZATION
+// 1. SUPABASE CLIENT INITIALIZATION
 // ====================================================================
 
 const supabaseUrl = ((import.meta as any).env?.VITE_SUPABASE_URL as string | undefined)?.trim() || '';
@@ -35,7 +35,7 @@ export function setApiUser(userId: string | null) {
   currentUserId = userId;
 }
 
-// Fallback HTTP request helper for environments without Supabase credentials
+// Fallback HTTP helper in case Supabase credentials are not supplied
 async function fallbackRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -62,19 +62,15 @@ async function fallbackRequest<T>(path: string, options: RequestInit = {}): Prom
     throw new Error(errorMsg);
   }
 
-  const contentType = res.headers.get('content-type') || '';
-  if (!contentType.includes('application/json')) {
-    throw new Error('استجابة غير صالحة من الخادم');
-  }
-
   return res.json();
 }
 
 // ====================================================================
-// MAPPER HELPERS (Supabase snake_case <-> Frontend camelCase)
+// 2. DATA MAPPERS (snake_case -> camelCase)
 // ====================================================================
 
 function mapUser(row: any): User {
+  if (!row) return {} as User;
   return {
     id: row.id,
     name: row.name,
@@ -88,134 +84,143 @@ function mapUser(row: any): User {
 }
 
 function mapCustomer(row: any, userDetails?: User): Customer {
+  if (!row) return {} as Customer;
   return {
     id: row.id,
     userId: row.user_id,
     address: row.address,
     preferredAreaId: row.preferred_area_id,
-    notes: row.notes || ''
-  };
-}
-
-function mapProvider(row: any, userDetails?: User): Provider {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    businessName: row.business_name,
-    bio: row.bio || '',
-    experienceYears: Number(row.experience_years || 1),
-    rating: Number(row.average_rating || 5.0),
-    reviewCount: Number(row.total_reviews || 0),
-    isVerified: Boolean(row.is_verified),
-    isActive: Boolean(row.is_active !== false),
-    categoryIds: Array.isArray(row.category_ids) ? row.category_ids : [],
-    serviceIds: Array.isArray(row.service_ids) ? row.service_ids : [],
-    areaIds: Array.isArray(row.area_ids) ? row.area_ids : [],
-    workingHours: row.working_hours || { start: '09:00', end: '21:00', daysOff: ['الجمعة'] },
-    workPhotos: [],
-    createdAt: row.created_at || new Date().toISOString(),
+    notes: row.notes || '',
     user: userDetails
   };
 }
 
 function mapCategory(row: any): Category {
+  if (!row) return {} as Category;
   return {
     id: row.id,
-    nameAr: row.name_ar,
-    nameEn: row.name_en || row.name_ar,
+    nameAr: row.name_ar || row.nameAr || '',
+    nameEn: row.name_en || row.nameEn || row.name_ar || '',
     icon: row.icon || 'Wrench',
-    slug: row.id.replace('cat_', ''),
-    description: row.description_ar || '',
-    sortOrder: 1,
+    slug: (row.id || '').replace('cat_', ''),
+    description: row.description_ar || row.description || '',
+    sortOrder: Number(row.sort_order || 1),
     isActive: Boolean(row.is_active !== false)
   };
 }
 
 function mapLocation(row: any): Location {
+  if (!row) return {} as Location;
   return {
     id: row.id,
-    nameAr: row.name_ar,
-    governorate: row.governorate || 'القاهرة',
-    city: row.governorate || 'القاهرة',
+    nameAr: row.name_ar || row.nameAr || '',
+    governorate: row.governorate || 'القاهرة / الجيزة',
+    city: row.city || row.governorate || 'القاهرة',
     isActive: Boolean(row.is_active !== false)
   };
 }
 
 function mapService(row: any): Service {
+  if (!row) return {} as Service;
   return {
     id: row.id,
-    categoryId: row.category_id,
-    nameAr: row.name_ar,
-    description: row.description_ar || '',
+    categoryId: row.category_id || row.categoryId || '',
+    nameAr: row.name_ar || row.nameAr || '',
+    description: row.description_ar || row.description || '',
     isActive: Boolean(row.is_active !== false)
   };
 }
 
-function mapBooking(row: any): Booking {
+function mapProvider(row: any, userDetails?: User): Provider {
+  if (!row) return {} as Provider;
   return {
     id: row.id,
-    bookingNumber: row.booking_number,
-    customerId: row.customer_id,
-    customerUserId: row.customer_user_id,
-    providerId: row.provider_id,
-    providerUserId: '',
-    serviceId: row.service_id,
-    locationId: row.location_id,
-    problemDescription: row.problem_description,
-    customerPhone: row.customer_phone,
-    addressDetails: row.address_details,
-    preferredDate: row.preferred_date,
-    preferredTime: row.preferred_time,
+    userId: row.user_id || row.userId || '',
+    businessName: row.business_name || row.businessName || '',
+    bio: row.bio || '',
+    experienceYears: Number(row.experience_years ?? row.experienceYears ?? 1),
+    rating: Number(row.average_rating ?? row.rating ?? 5.0),
+    reviewCount: Number(row.total_reviews ?? row.reviewCount ?? 0),
+    isVerified: Boolean(row.is_verified ?? row.isVerified ?? false),
+    isActive: Boolean(row.is_active !== false),
+    categoryIds: Array.isArray(row.category_ids) ? row.category_ids : Array.isArray(row.categoryIds) ? row.categoryIds : [],
+    serviceIds: Array.isArray(row.service_ids) ? row.service_ids : Array.isArray(row.serviceIds) ? row.serviceIds : [],
+    areaIds: Array.isArray(row.area_ids) ? row.area_ids : Array.isArray(row.areaIds) ? row.areaIds : [],
+    workingHours: row.working_hours || row.workingHours || { start: '09:00', end: '21:00', daysOff: ['الجمعة'] },
+    workPhotos: row.work_photos || row.workPhotos || [],
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    user: userDetails
+  };
+}
+
+function mapBooking(row: any): Booking {
+  if (!row) return {} as Booking;
+  return {
+    id: row.id,
+    bookingNumber: row.booking_number || row.bookingNumber || '',
+    customerId: row.customer_id || row.customerId || '',
+    customerUserId: row.customer_user_id || row.customerUserId || '',
+    providerId: row.provider_id || row.providerId || '',
+    providerUserId: row.provider_user_id || row.providerUserId || '',
+    serviceId: row.service_id || row.serviceId || '',
+    locationId: row.location_id || row.locationId || '',
+    problemDescription: row.problem_description || row.problemDescription || '',
+    customerPhone: row.customer_phone || row.customerPhone || '',
+    addressDetails: row.address_details || row.addressDetails || '',
+    preferredDate: row.preferred_date || row.preferredDate || null,
+    preferredTime: row.preferred_time || row.preferredTime || null,
     urgency: row.urgency || 'normal',
-    photoUrl: row.photo_url,
+    photoUrl: row.photo_url || row.photoUrl || null,
     lat: row.lat ? Number(row.lat) : null,
     lng: row.lng ? Number(row.lng) : null,
-    status: row.status as BookingStatus,
-    finalPrice: row.final_price ? Number(row.final_price) : null,
-    commissionAmount: row.commission_amount ? Number(row.commission_amount) : null,
-    providerEarnings: row.provider_earnings ? Number(row.provider_earnings) : null,
-    rejectionReason: row.rejection_reason,
-    cancellationReason: row.cancellation_reason,
-    createdAt: row.created_at || new Date().toISOString(),
-    updatedAt: row.updated_at || new Date().toISOString()
+    status: (row.status || 'PENDING') as BookingStatus,
+    finalPrice: row.final_price ? Number(row.final_price) : row.finalPrice ? Number(row.finalPrice) : null,
+    commissionAmount: row.commission_amount ? Number(row.commission_amount) : row.commissionAmount ? Number(row.commissionAmount) : null,
+    providerEarnings: row.provider_earnings ? Number(row.provider_earnings) : row.providerEarnings ? Number(row.providerEarnings) : null,
+    rejectionReason: row.rejection_reason || row.rejectionReason,
+    cancellationReason: row.cancellation_reason || row.cancellationReason,
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    updatedAt: row.updated_at || row.updatedAt || new Date().toISOString()
   };
 }
 
 function mapReview(row: any): Review {
+  if (!row) return {} as Review;
   return {
     id: row.id,
-    bookingId: row.booking_id,
-    customerId: row.customer_id,
-    providerId: row.provider_id,
-    rating: Number(row.rating),
-    comment: row.comment,
-    providerReply: row.provider_reply,
-    createdAt: row.created_at || new Date().toISOString(),
-    customerName: row.customer_name || 'عميل',
-    customerAvatar: row.customer_avatar
+    bookingId: row.booking_id || row.bookingId || '',
+    customerId: row.customer_id || row.customerId || '',
+    providerId: row.provider_id || row.providerId || '',
+    rating: Number(row.rating || 5),
+    comment: row.comment || '',
+    providerReply: row.provider_reply || row.providerReply,
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    customerName: row.customer_name || row.customerName || 'عميل',
+    customerAvatar: row.customer_avatar || row.customerAvatar
   };
 }
 
 function mapNotification(row: any): AppNotification {
+  if (!row) return {} as AppNotification;
   return {
     id: row.id,
-    userId: row.user_id,
-    title: row.title,
-    message: row.message,
+    userId: row.user_id || row.userId || '',
+    title: row.title || '',
+    message: row.message || '',
     type: row.type || 'system',
     link: row.link,
-    isRead: Boolean(row.is_read),
-    createdAt: row.created_at || new Date().toISOString()
+    isRead: Boolean(row.is_read ?? row.isRead ?? false),
+    createdAt: row.created_at || row.createdAt || new Date().toISOString()
   };
 }
 
 // ====================================================================
-// CORE API IMPLEMENTATION (Supabase Direct + Seamless Local Fallback)
+// 3. COMPLETE API IMPLEMENTATION
 // ====================================================================
 
 export const api = {
   // ------------------------------------------------------------------
-  // 1. AUTHENTICATION & DEMO ROLES
+  // AUTHENTICATION
   // ------------------------------------------------------------------
   login: async (email: string, password?: string) => {
     if (!supabase) {
@@ -231,14 +236,8 @@ export const api = {
       .ilike('email', email.trim())
       .maybeSingle();
 
-    if (error) {
-      throw new Error(`خطأ أثناء تسجيل الدخول: ${error.message}`);
-    }
-
-    if (!userRow) {
-      throw new Error('البريد الإلكتروني غير مسجل');
-    }
-
+    if (error) throw new Error(`خطأ أثناء تسجيل الدخول: ${error.message}`);
+    if (!userRow) throw new Error('البريد الإلكتروني غير مسجل');
     if (password && userRow.password && userRow.password !== password) {
       throw new Error('كلمة المرور غير صحيحة');
     }
@@ -414,9 +413,7 @@ export const api = {
       .limit(1)
       .single();
 
-    if (!userRow) {
-      throw new Error(`لم يتم العثور على حساب تجريبي برتبة ${role}`);
-    }
+    if (!userRow) throw new Error(`لم يتم العثور على حساب تجريبي برتبة ${role}`);
 
     const user = mapUser(userRow);
     setApiUser(user.id);
@@ -439,15 +436,10 @@ export const api = {
     if (!supabase) {
       return fallbackRequest<{ user: User; customer: Customer | null; provider: Provider | null }>('/api/auth/me');
     }
-
-    if (!currentUserId) {
-      throw new Error('يرجى تسجيل الدخول أولاً');
-    }
+    if (!currentUserId) throw new Error('يرجى تسجيل الدخول أولاً');
 
     const { data: userRow } = await supabase.from('users').select('*').eq('id', currentUserId).maybeSingle();
-    if (!userRow) {
-      throw new Error('المستخدم غير موجود');
-    }
+    if (!userRow) throw new Error('المستخدم غير موجود');
 
     const user = mapUser(userRow);
     let customer: Customer | null = null;
@@ -465,16 +457,20 @@ export const api = {
   },
 
   // ------------------------------------------------------------------
-  // 2. CATEGORIES, SERVICES & LOCATIONS
+  // CATEGORIES, SERVICES & LOCATIONS (DROPDOWNS FIX)
   // ------------------------------------------------------------------
-  getCategories: async () => {
+  getCategories: async (): Promise<Category[]> => {
     if (!supabase) return fallbackRequest<Category[]>('/api/categories');
-    const { data, error } = await supabase.from('categories').select('*').eq('is_active', true);
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('is_active', true);
+
     if (error) throw new Error(error.message);
     return (data || []).map(mapCategory);
   },
 
-  getCategory: async (id: string) => {
+  getCategory: async (id: string): Promise<Category> => {
     if (!supabase) return fallbackRequest<Category>(`/api/categories/${id}`);
     const { data, error } = await supabase.from('categories').select('*').eq('id', id).single();
     if (error) throw new Error(error.message);
@@ -504,15 +500,13 @@ export const api = {
   },
 
   deleteCategory: async (id: string) => {
-    if (!supabase) {
-      return fallbackRequest<{ success: boolean }>(`/api/admin/categories/${id}`, { method: 'DELETE' });
-    }
+    if (!supabase) return fallbackRequest<{ success: boolean }>(`/api/admin/categories/${id}`, { method: 'DELETE' });
     const { error } = await supabase.from('categories').delete().eq('id', id);
     if (error) throw new Error(error.message);
     return { success: true };
   },
 
-  getServices: async (categoryId?: string) => {
+  getServices: async (categoryId?: string): Promise<Service[]> => {
     if (!supabase) {
       return fallbackRequest<Service[]>(categoryId ? `/api/services?categoryId=${categoryId}` : '/api/services');
     }
@@ -548,15 +542,13 @@ export const api = {
   },
 
   deleteService: async (id: string) => {
-    if (!supabase) {
-      return fallbackRequest<{ success: boolean }>(`/api/admin/services/${id}`, { method: 'DELETE' });
-    }
+    if (!supabase) return fallbackRequest<{ success: boolean }>(`/api/admin/services/${id}`, { method: 'DELETE' });
     const { error } = await supabase.from('services').delete().eq('id', id);
     if (error) throw new Error(error.message);
     return { success: true };
   },
 
-  getLocations: async () => {
+  getLocations: async (): Promise<Location[]> => {
     if (!supabase) return fallbackRequest<Location[]>('/api/locations');
     const { data, error } = await supabase.from('locations').select('*').eq('is_active', true);
     if (error) throw new Error(error.message);
@@ -585,18 +577,26 @@ export const api = {
   },
 
   deleteLocation: async (id: string) => {
-    if (!supabase) {
-      return fallbackRequest<{ success: boolean }>(`/api/admin/locations/${id}`, { method: 'DELETE' });
-    }
+    if (!supabase) return fallbackRequest<{ success: boolean }>(`/api/admin/locations/${id}`, { method: 'DELETE' });
     const { error } = await supabase.from('locations').delete().eq('id', id);
     if (error) throw new Error(error.message);
     return { success: true };
   },
 
   // ------------------------------------------------------------------
-  // 3. PROVIDERS DIRECTORY
+  // PROVIDERS DIRECTORY (MAPPER + FILTERING)
   // ------------------------------------------------------------------
-  getProviders: async (params?: { categoryId?: string; category?: string; areaId?: string; area?: string; search?: string; q?: string; minRating?: number; verified?: boolean; activeOnly?: boolean }) => {
+  getProviders: async (params?: {
+    categoryId?: string;
+    category?: string;
+    areaId?: string;
+    area?: string;
+    search?: string;
+    q?: string;
+    minRating?: number;
+    verified?: boolean;
+    activeOnly?: boolean;
+  }): Promise<Provider[]> => {
     const categoryFilter = params?.categoryId || params?.category;
     const areaFilter = params?.areaId || params?.area;
     const searchFilter = params?.search || params?.q;
@@ -634,9 +634,8 @@ export const api = {
       return mapProvider(row, userDetails);
     });
 
-    const searchTerm = params?.search || params?.q;
-    if (searchTerm) {
-      const s = searchTerm.trim().toLowerCase();
+    if (searchFilter) {
+      const s = searchFilter.trim().toLowerCase();
       providers = providers.filter(p =>
         p.businessName.toLowerCase().includes(s) ||
         p.bio.toLowerCase().includes(s) ||
@@ -647,7 +646,7 @@ export const api = {
     return providers;
   },
 
-  getProvider: async (id: string) => {
+  getProvider: async (id: string): Promise<Provider> => {
     if (!supabase) return fallbackRequest<Provider>(`/api/providers/${id}`);
     const { data, error } = await supabase.from('providers').select('*, users(*)').eq('id', id).single();
     if (error) throw new Error(error.message);
@@ -655,15 +654,15 @@ export const api = {
     return mapProvider(data, userDetails);
   },
 
-  getProviderById: async (id: string) => {
+  getProviderById: async (id: string): Promise<Provider> => {
     return api.getProvider(id);
   },
 
-  updateProvider: async (id: string, data: Partial<Provider>) => {
+  updateProvider: async (id: string, data: Partial<Provider>): Promise<Provider> => {
     return api.updateProviderProfile(id, data);
   },
 
-  updateProviderProfile: async (id: string, data: Partial<Provider>) => {
+  updateProviderProfile: async (id: string, data: Partial<Provider>): Promise<Provider> => {
     if (!supabase) {
       return fallbackRequest<Provider>(`/api/providers/${id}`, {
         method: 'PUT',
@@ -691,9 +690,7 @@ export const api = {
   },
 
   toggleProviderVerified: async (providerId: string) => {
-    if (!supabase) {
-      return fallbackRequest<{ isVerified: boolean }>(`/api/admin/providers/${providerId}/verify`, { method: 'POST' });
-    }
+    if (!supabase) return fallbackRequest<{ isVerified: boolean }>(`/api/admin/providers/${providerId}/verify`, { method: 'POST' });
     const { data: prov } = await supabase.from('providers').select('is_verified').eq('id', providerId).single();
     const newStatus = !prov?.is_verified;
     const { error } = await supabase.from('providers').update({ is_verified: newStatus }).eq('id', providerId);
@@ -702,7 +699,7 @@ export const api = {
   },
 
   // ------------------------------------------------------------------
-  // 4. BOOKINGS ENGINE
+  // BOOKINGS ENGINE
   // ------------------------------------------------------------------
   createBooking: async (data: {
     serviceId: string;
@@ -719,7 +716,7 @@ export const api = {
     photoUrl?: string;
     lat?: number;
     lng?: number;
-  }) => {
+  }): Promise<Booking> => {
     if (!supabase) {
       return fallbackRequest<Booking>('/api/bookings', {
         method: 'POST',
@@ -733,8 +730,8 @@ export const api = {
     const bookingPayload = {
       id: bookingId,
       booking_number: bookingNumber,
-      customer_id: 'cust_direct',
-      customer_user_id: currentUserId || 'usr_guest',
+      customer_id: data.customerId || 'cust_direct',
+      customer_user_id: data.customerUserId || currentUserId || 'usr_guest',
       provider_id: data.providerId,
       service_id: data.serviceId,
       location_id: data.locationId,
@@ -755,7 +752,6 @@ export const api = {
     const { data: inserted, error } = await supabase.from('bookings').insert(bookingPayload).select('*').single();
     if (error) throw new Error(`فشل إنشاء الحجز: ${error.message}`);
 
-    // Create notification for provider
     const { data: providerRow } = await supabase.from('providers').select('user_id').eq('id', data.providerId).maybeSingle();
     if (providerRow?.user_id) {
       await supabase.from('notifications').insert({
@@ -773,7 +769,7 @@ export const api = {
     return mapBooking(inserted);
   },
 
-  getBookings: async (params?: { role?: string; status?: BookingStatus; customerUserId?: string; providerId?: string }) => {
+  getBookings: async (params?: { role?: string; status?: BookingStatus; customerUserId?: string; providerId?: string }): Promise<Booking[]> => {
     if (!supabase) {
       const query = new URLSearchParams();
       if (params?.role) query.append('role', params.role);
@@ -814,7 +810,7 @@ export const api = {
     });
   },
 
-  getBooking: async (id: string) => {
+  getBooking: async (id: string): Promise<Booking> => {
     if (!supabase) return fallbackRequest<Booking>(`/api/bookings/${id}`);
     const { data, error } = await supabase.from('bookings').select('*, services(*), locations(*)').eq('id', id).single();
     if (error) throw new Error(error.message);
@@ -828,7 +824,7 @@ export const api = {
     id: string,
     status: BookingStatus,
     details?: string | { changedByUserId?: any; cancellationReason?: string; rejectionReason?: string; finalPrice?: number; reason?: string }
-  ) => {
+  ): Promise<Booking> => {
     if (!supabase) {
       return fallbackRequest<Booking>(`/api/bookings/${id}/status`, {
         method: 'PATCH',
@@ -860,7 +856,6 @@ export const api = {
     const { data, error } = await supabase.from('bookings').update(updatePayload).eq('id', id).select('*').single();
     if (error) throw new Error(error.message);
 
-    // Notify customer on status change
     if (data.customer_user_id) {
       const statusText = status === 'ACCEPTED' ? 'تم قبول طلبك' : status === 'REJECTED' ? 'تم الاعتذار عن طلبك' : `تحديث في طلبك: ${status}`;
       await supabase.from('notifications').insert({
@@ -950,7 +945,7 @@ export const api = {
   },
 
   // ------------------------------------------------------------------
-  // 5. REVIEWS & RATINGS
+  // REVIEWS & RATINGS
   // ------------------------------------------------------------------
   createReview: async (data: { bookingId: string; rating: number; comment: string; customerId?: string; providerId?: string; customerUserId?: string }) => {
     if (!supabase) {
@@ -984,7 +979,6 @@ export const api = {
     const { data: inserted, error } = await supabase.from('reviews').insert(reviewPayload).select('*').single();
     if (error) throw new Error(error.message);
 
-    // Update provider rating
     const { data: allReviews } = await supabase.from('reviews').select('rating').eq('provider_id', booking.provider_id);
     if (allReviews && allReviews.length > 0) {
       const avg = Number((allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length).toFixed(2));
@@ -997,7 +991,7 @@ export const api = {
     return mapReview(inserted);
   },
 
-  getReviews: async (providerIdOrOptions?: string | { providerId?: string }) => {
+  getReviews: async (providerIdOrOptions?: string | { providerId?: string }): Promise<Review[]> => {
     const provId = typeof providerIdOrOptions === 'string' ? providerIdOrOptions : providerIdOrOptions?.providerId;
     if (!supabase) {
       return fallbackRequest<Review[]>(provId ? `/api/reviews?providerId=${provId}` : '/api/reviews');
@@ -1011,7 +1005,7 @@ export const api = {
     return (data || []).map(mapReview);
   },
 
-  getProviderReviews: async (providerId: string) => {
+  getProviderReviews: async (providerId: string): Promise<Review[]> => {
     return api.getReviews(providerId);
   },
 
@@ -1032,18 +1026,16 @@ export const api = {
   },
 
   deleteReview: async (id: string) => {
-    if (!supabase) {
-      return fallbackRequest<{ success: boolean }>(`/api/admin/reviews/${id}`, { method: 'DELETE' });
-    }
+    if (!supabase) return fallbackRequest<{ success: boolean }>(`/api/admin/reviews/${id}`, { method: 'DELETE' });
     const { error } = await supabase.from('reviews').delete().eq('id', id);
     if (error) throw new Error(error.message);
     return { success: true };
   },
 
   // ------------------------------------------------------------------
-  // 6. SUBSCRIPTIONS & COMMISSIONS
+  // SUBSCRIPTIONS & COMMISSIONS
   // ------------------------------------------------------------------
-  getSubscriptionPlans: async () => {
+  getSubscriptionPlans: async (): Promise<SubscriptionPlan[]> => {
     return [
       { id: 'plan_free', nameAr: 'الباقة المجانية', pricePerMonth: 0, features: ['عمولة قياسية 10%', 'تلقي حتى 10 طلبات شهرياً', 'دعم فني عادي'], commissionRate: 0.10, maxBookingsPerMonth: 10, isActive: true },
       { id: 'plan_pro', nameAr: 'باقة المحترف (PRO)', pricePerMonth: 299, features: ['عمولة مخفضة 5% فقط', 'طلبات غير محدودة', 'أولوية الظهور في نتائج البحث', 'شارة فني موثوق'], commissionRate: 0.05, maxBookingsPerMonth: 9999, isPopular: true, isActive: true },
@@ -1051,7 +1043,7 @@ export const api = {
     ];
   },
 
-  getMySubscription: async () => {
+  getMySubscription: async (): Promise<ProviderSubscription> => {
     if (!currentUserId) throw new Error('يرجى تسجيل الدخول');
     if (!supabase) return fallbackRequest<ProviderSubscription>('/api/subscription/my-plan');
 
@@ -1061,7 +1053,7 @@ export const api = {
     return api.getProviderSubscription(prov.id);
   },
 
-  getProviderSubscription: async (providerId: string) => {
+  getProviderSubscription: async (providerId: string): Promise<ProviderSubscription> => {
     if (!supabase) return fallbackRequest<ProviderSubscription>(`/api/providers/${providerId}/subscription`);
 
     const { data } = await supabase.from('provider_subscriptions').select('*').eq('provider_id', providerId).maybeSingle();
@@ -1076,7 +1068,7 @@ export const api = {
     };
   },
 
-  subscribeProvider: async (providerId: string, plan: string = 'PRO') => {
+  subscribeProvider: async (providerId: string, plan: string = 'PRO'): Promise<ProviderSubscription> => {
     if (!supabase) {
       return fallbackRequest<ProviderSubscription>(`/api/providers/${providerId}/subscribe`, {
         method: 'POST',
@@ -1104,12 +1096,12 @@ export const api = {
     };
   },
 
-  upgradeSubscription: async (plan: 'PRO' | 'VIP') => {
+  upgradeSubscription: async (plan: 'PRO' | 'VIP'): Promise<ProviderSubscription> => {
     const mySub = await api.getMySubscription();
     return api.subscribeProvider(mySub.providerId, plan);
   },
 
-  getProviderCommissions: async () => {
+  getProviderCommissions: async (): Promise<Commission[]> => {
     if (!supabase) return fallbackRequest<Commission[]>('/api/provider/commissions');
     if (!currentUserId) return [];
     const { data: prov } = await supabase.from('providers').select('id').eq('user_id', currentUserId).maybeSingle();
@@ -1133,9 +1125,9 @@ export const api = {
   },
 
   // ------------------------------------------------------------------
-  // 7. NOTIFICATIONS
+  // NOTIFICATIONS
   // ------------------------------------------------------------------
-  getNotifications: async (userId?: string) => {
+  getNotifications: async (userId?: string): Promise<AppNotification[]> => {
     const targetUserId = userId || currentUserId;
     if (!supabase) return fallbackRequest<AppNotification[]>('/api/notifications');
     if (!targetUserId) return [];
@@ -1171,13 +1163,13 @@ export const api = {
   },
 
   // ------------------------------------------------------------------
-  // 8. ADMIN & PLATFORM STATS
+  // ADMIN & STATS
   // ------------------------------------------------------------------
-  getAdminStats: async () => {
+  getAdminStats: async (): Promise<PlatformStats> => {
     return api.getPlatformStats();
   },
 
-  getPlatformStats: async () => {
+  getPlatformStats: async (): Promise<PlatformStats> => {
     if (!supabase) return fallbackRequest<PlatformStats>('/api/admin/stats');
 
     const [{ count: customersCount }, { count: providersCount }, { count: bookingsCount }, { data: bookingsData }] = await Promise.all([
@@ -1208,14 +1200,14 @@ export const api = {
     };
   },
 
-  getCustomers: async () => {
+  getCustomers: async (): Promise<Customer[]> => {
     if (!supabase) return fallbackRequest<Customer[]>('/api/admin/customers');
     const { data, error } = await supabase.from('customers').select('*, users(*)');
     if (error) throw new Error(error.message);
     return (data || []).map((row: any) => mapCustomer(row, row.users ? mapUser(row.users) : undefined));
   },
 
-  getAllUsers: async () => {
+  getAllUsers: async (): Promise<User[]> => {
     if (!supabase) return fallbackRequest<User[]>('/api/admin/users');
     const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
     if (error) throw new Error(error.message);

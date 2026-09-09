@@ -26,6 +26,7 @@ export interface Customer {
   address: string;
   preferredAreaId?: string;
   notes?: string;
+  user?: User;
 }
 
 export interface Provider {
