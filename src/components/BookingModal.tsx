@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, AlertTriangle, CheckCircle2, ShieldCheck, MapPin, Phone, FileText, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { api } from '../lib/api.js';
 import { LocationMap, Coordinates } from './LocationMap.js';
-import type { Provider, Service, Location } from '../types.js';
+import type { Provider, Service, Location, Category } from '../types.js';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  provider: Provider & { services: Service[]; areas: Location[] };
+  provider: Provider & { services?: Service[]; areas?: Location[] };
   initialServiceId?: string;
   onBookingCreated: (booking: any) => void;
 }
@@ -16,10 +16,15 @@ interface Props {
 export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBookingCreated }: Props) {
   const { user, customer } = useAuth();
 
-  const [serviceId, setServiceId] = useState(initialServiceId || provider.services?.[0]?.id || '');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [categoryId, setCategoryId] = useState<string>('');
+
+  const [serviceId, setServiceId] = useState(initialServiceId || '');
   const [problemDescription, setProblemDescription] = useState('');
   const [customerPhone, setCustomerPhone] = useState(user?.phone || '01123456789');
-  const [locationId, setLocationId] = useState(provider.areaIds?.[0] || '');
+  const [locationId, setLocationId] = useState('');
   const [addressDetails, setAddressDetails] = useState(customer?.address || 'شارع التحرير، برج الأطباء، الدور الرابع');
   const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
   const [preferredDate, setPreferredDate] = useState('');
@@ -29,9 +34,62 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Load all categories, services, and locations directly from API
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+
+    const loadData = async () => {
+      try {
+        const [cats, srvs, locs] = await Promise.all([
+          api.getCategories().catch(() => []),
+          api.getServices().catch(() => []),
+          api.getLocations().catch(() => [])
+        ]);
+
+        if (!isMounted) return;
+
+        setCategories(cats || []);
+
+        // Load all available services without restricting to provider.serviceIds
+        const serviceList = (srvs && srvs.length > 0) ? srvs : (provider.services || []);
+        setServices(serviceList);
+
+        // Load all available locations without restricting to provider.areaIds
+        const locationList = (locs && locs.length > 0) ? locs : (provider.areas || []);
+        setLocations(locationList);
+
+        // Select initial service
+        if (initialServiceId) {
+          setServiceId(initialServiceId);
+        } else if (serviceList.length > 0) {
+          setServiceId(serviceList[0].id);
+        }
+
+        // Select initial location
+        if (locationList.length > 0) {
+          setLocationId(locationList[0].id);
+        }
+      } catch (err) {
+        console.error('Error loading booking modal options:', err);
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, initialServiceId, provider]);
+
   if (!isOpen) return null;
 
-  const selectedLocation = provider.areas?.find(loc => loc.id === locationId);
+  // Filter services by category if selected, otherwise display all
+  const filteredServices = categoryId ? services.filter(s => s.categoryId === categoryId) : services;
+  const displayedServices = filteredServices.length > 0 ? filteredServices : services;
+
+  const selectedLocation = locations.find(loc => loc.id === locationId) || provider.areas?.find(loc => loc.id === locationId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +122,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
         customerUserId: user?.id || 'usr_customer1',
         providerId: provider.id,
         serviceId,
-        locationId: locationId || provider.areaIds[0] || 'loc_mohandessin',
+        locationId: locationId || locations[0]?.id || provider.areaIds?.[0] || 'loc_mohandessin',
         problemDescription,
         customerPhone,
         addressDetails,
@@ -134,16 +192,43 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
             </div>
           </div>
 
+          {/* Optional Category Filter */}
+          {categories.length > 0 && (
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1.5">القسم / التخصص</label>
+              <select
+                value={categoryId}
+                onChange={e => {
+                  const newCat = e.target.value;
+                  setCategoryId(newCat);
+                  const matchingServices = newCat ? services.filter(s => s.categoryId === newCat) : services;
+                  if (matchingServices.length > 0) {
+                    setServiceId(matchingServices[0].id);
+                  }
+                }}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 bg-white"
+              >
+                <option value="">-- جميع الأقسام المتاحة --</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.nameAr}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Service Selector */}
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1.5">الخدمة المطلوبة *</label>
             <select
               value={serviceId}
               onChange={e => setServiceId(e.target.value)}
+              required
               className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 bg-white"
             >
               <option value="" disabled>-- اختر الخدمة --</option>
-              {provider.services?.map(srv => (
+              {displayedServices.map(srv => (
                 <option key={srv.id} value={srv.id}>
                   {srv.nameAr}
                 </option>
@@ -260,9 +345,11 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
               <select
                 value={locationId}
                 onChange={e => setLocationId(e.target.value)}
+                required
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 bg-white"
               >
-                {provider.areas?.map(loc => (
+                <option value="" disabled>-- اختر المنطقة --</option>
+                {locations.map(loc => (
                   <option key={loc.id} value={loc.id}>
                     {loc.nameAr} ({loc.governorate})
                   </option>
@@ -344,3 +431,4 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
     </div>
   );
 }
+
