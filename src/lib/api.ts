@@ -155,6 +155,7 @@ function mapProvider(row: any, userDetails?: User): Provider {
 
 function mapBooking(row: any): Booking {
   if (!row) return {} as Booking;
+  const normalizedStatus = (row.status || 'PENDING').toString().toUpperCase() as BookingStatus;
   return {
     id: row.id,
     bookingNumber: row.booking_number || row.bookingNumber || '',
@@ -173,7 +174,7 @@ function mapBooking(row: any): Booking {
     photoUrl: row.photo_url || row.photoUrl || null,
     lat: row.lat ? Number(row.lat) : null,
     lng: row.lng ? Number(row.lng) : null,
-    status: (row.status || 'PENDING') as BookingStatus,
+    status: normalizedStatus,
     finalPrice: row.final_price ? Number(row.final_price) : row.finalPrice ? Number(row.finalPrice) : null,
     commissionAmount: row.commission_amount ? Number(row.commission_amount) : row.commissionAmount ? Number(row.commissionAmount) : null,
     providerEarnings: row.provider_earnings ? Number(row.provider_earnings) : row.providerEarnings ? Number(row.providerEarnings) : null,
@@ -752,7 +753,7 @@ export const api = {
       photo_url: data.photoUrl || null,
       lat: data.lat || null,
       lng: data.lng || null,
-      status: 'PENDING',
+      status: 'pending',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -789,7 +790,9 @@ export const api = {
     let query = supabase.from('bookings').select('*, services(*), locations(*)').order('created_at', { ascending: false });
 
     if (params?.status) {
-      query = query.eq('status', params.status);
+      const sLower = params.status.toLowerCase();
+      const sUpper = params.status.toUpperCase();
+      query = query.or(`status.eq.${sLower},status.eq.${sUpper}`);
     }
 
     if (params?.customerUserId) {
@@ -840,8 +843,9 @@ export const api = {
       });
     }
 
+    const statusForDb = (status || '').toString().toLowerCase();
     const updatePayload: Record<string, any> = {
-      status,
+      status: statusForDb,
       updated_at: new Date().toISOString()
     };
 
@@ -896,7 +900,7 @@ export const api = {
     const { data: updatedBooking, error: bookingErr } = await supabase
       .from('bookings')
       .update({
-        status: 'COMPLETED',
+        status: 'completed',
         final_price: data.finalPrice,
         commission_amount: commissionAmount,
         provider_earnings: providerEarnings,

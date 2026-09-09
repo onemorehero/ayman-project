@@ -3,7 +3,7 @@ import { X, Calendar, Clock, AlertTriangle, CheckCircle2, ShieldCheck, MapPin, P
 import { useAuth } from '../context/AuthContext.js';
 import { api } from '../lib/api.js';
 import { LocationMap, Coordinates } from './LocationMap.js';
-import type { Provider, Service, Location, Category } from '../types.js';
+import type { Provider, Service, Location } from '../types.js';
 
 interface Props {
   isOpen: boolean;
@@ -16,10 +16,8 @@ interface Props {
 export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBookingCreated }: Props) {
   const { user, customer } = useAuth();
 
-  const [categories, setCategories] = useState<Category[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [categoryId, setCategoryId] = useState<string>('');
 
   const [serviceId, setServiceId] = useState(initialServiceId || '');
   const [problemDescription, setProblemDescription] = useState('');
@@ -34,7 +32,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load all categories, services, and locations directly from API
+  // Load services and locations filtered automatically by provider specialization
   useEffect(() => {
     if (!isOpen) return;
 
@@ -42,34 +40,54 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
 
     const loadData = async () => {
       try {
-        const [cats, srvs, locs] = await Promise.all([
-          api.getCategories().catch(() => []),
+        const [allServices, allLocations] = await Promise.all([
           api.getServices().catch(() => []),
           api.getLocations().catch(() => [])
         ]);
 
         if (!isMounted) return;
 
-        setCategories(cats || []);
+        // Automatically filter services based on provider specialization (categoryIds / serviceIds)
+        let filteredServices = (allServices || []).filter(srv => {
+          const matchesService = Array.isArray(provider.serviceIds) && provider.serviceIds.length > 0 && provider.serviceIds.includes(srv.id);
+          const matchesCategory = Array.isArray(provider.categoryIds) && provider.categoryIds.length > 0 && provider.categoryIds.includes(srv.categoryId);
+          return matchesService || matchesCategory;
+        });
 
-        // Load all available services without restricting to provider.serviceIds
-        const serviceList = (srvs && srvs.length > 0) ? srvs : (provider.services || []);
-        setServices(serviceList);
+        // Fallback to provider.services if present
+        if (filteredServices.length === 0 && provider.services && provider.services.length > 0) {
+          filteredServices = provider.services;
+        }
 
-        // Load all available locations without restricting to provider.areaIds
-        const locationList = (locs && locs.length > 0) ? locs : (provider.areas || []);
-        setLocations(locationList);
+        // Safety fallback: if ID mismatch or no services matched, show available services so the user is never blocked
+        if (filteredServices.length === 0) {
+          filteredServices = allServices || [];
+        }
+
+        setServices(filteredServices);
+
+        // Filter locations based on provider areaIds
+        let providerLocations = (allLocations || []).filter(loc =>
+          Array.isArray(provider.areaIds) && provider.areaIds.length > 0 ? provider.areaIds.includes(loc.id) : true
+        );
+        if (providerLocations.length === 0 && provider.areas && provider.areas.length > 0) {
+          providerLocations = provider.areas;
+        }
+        if (providerLocations.length === 0) {
+          providerLocations = allLocations || [];
+        }
+        setLocations(providerLocations);
 
         // Select initial service
-        if (initialServiceId) {
+        if (initialServiceId && filteredServices.some(s => s.id === initialServiceId)) {
           setServiceId(initialServiceId);
-        } else if (serviceList.length > 0) {
-          setServiceId(serviceList[0].id);
+        } else if (filteredServices.length > 0) {
+          setServiceId(filteredServices[0].id);
         }
 
         // Select initial location
-        if (locationList.length > 0) {
-          setLocationId(locationList[0].id);
+        if (providerLocations.length > 0) {
+          setLocationId(providerLocations[0].id);
         }
       } catch (err) {
         console.error('Error loading booking modal options:', err);
@@ -84,10 +102,6 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
   }, [isOpen, initialServiceId, provider]);
 
   if (!isOpen) return null;
-
-  // Filter services by category if selected, otherwise display all
-  const filteredServices = categoryId ? services.filter(s => s.categoryId === categoryId) : services;
-  const displayedServices = filteredServices.length > 0 ? filteredServices : services;
 
   const selectedLocation = locations.find(loc => loc.id === locationId) || provider.areas?.find(loc => loc.id === locationId);
 
@@ -192,33 +206,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
             </div>
           </div>
 
-          {/* Optional Category Filter */}
-          {categories.length > 0 && (
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1.5">القسم / التخصص</label>
-              <select
-                value={categoryId}
-                onChange={e => {
-                  const newCat = e.target.value;
-                  setCategoryId(newCat);
-                  const matchingServices = newCat ? services.filter(s => s.categoryId === newCat) : services;
-                  if (matchingServices.length > 0) {
-                    setServiceId(matchingServices[0].id);
-                  }
-                }}
-                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 bg-white"
-              >
-                <option value="">-- جميع الأقسام المتاحة --</option>
-                {categories.map(cat => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.nameAr}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Service Selector */}
+          {/* Service Selector (Filtered automatically by provider's specialization) */}
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1.5">الخدمة المطلوبة *</label>
             <select
@@ -228,7 +216,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
               className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 bg-white"
             >
               <option value="" disabled>-- اختر الخدمة --</option>
-              {displayedServices.map(srv => (
+              {services.map(srv => (
                 <option key={srv.id} value={srv.id}>
                   {srv.nameAr}
                 </option>
