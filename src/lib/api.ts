@@ -274,37 +274,62 @@ function mapNotification(row: any): AppNotification {
 
 export const api = {
   // ------------------------------------------------------------------
-  // AUTHENTICATION
+  // AUTHENTICATION (SUPABASE AUTH + DATABASE TABLES)
   // ------------------------------------------------------------------
   login: async (email: string, password?: string) => {
-    if (!supabase) {
-      const res = await fallbackRequest<{ user: User; customer: Customer | null; provider: Provider | null }>('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password })
-      });
-      const pen = api.getUserPenaltyInfo(res.user.id);
-      if (pen.status === 'suspended' || res.user.status === 'suspended') {
-        throw new Error('تم إيقاف حسابك مؤقتاً بسبب مخالفة سياسات المنصة أو وجود شكوى قيد التحقيق. يرجى مراجعة إدارة خلصلى.');
+    const cleanEmail = email.trim().toLowerCase();
+    let authUser: any = null;
+
+    // 1. Attempt Supabase Auth signInWithPassword if password is provided
+    if (password) {
+      try {
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password
+        });
+        if (!authError && authData.user) {
+          authUser = authData.user;
+        }
+      } catch {
+        // Fallback to checking public.users table directly for pre-existing or direct database accounts
       }
-      if (pen.status === 'banned' || res.user.status === 'banned') {
-        throw new Error('تم حظر هذا الحساب نهائياً لمخالفة ميثاق مجتمع خلصلى.');
-      }
-      return res;
     }
 
-    const { data: userRow, error } = await supabase
-      .from('users')
-      .select('*')
-      .ilike('email', email.trim())
-      .maybeSingle();
+    // 2. Fetch user profile from public.users table
+    let query = supabase.from('users').select('*').ilike('email', cleanEmail);
+    if (authUser?.id) {
+      query = supabase.from('users').select('*').or(`id.eq.${authUser.id},email.ilike.${cleanEmail}`);
+    }
+    const { data: userRow, error: userErr } = await query.maybeSingle();
 
-    if (error) throw new Error(`خطأ أثناء تسجيل الدخول: ${error.message}`);
-    if (!userRow) throw new Error('البريد الإلكتروني غير مسجل');
-    if (password && userRow.password && userRow.password !== password) {
+    if (userErr) throw new Error(`خطأ أثناء تسجيل الدخول: ${userErr.message}`);
+    if (!userRow) {
+      if (authUser) {
+        const meta = authUser.user_metadata || {};
+        const role = meta.role || 'customer';
+        const newUserData = {
+          id: authUser.id,
+          email: cleanEmail,
+          name: meta.name || cleanEmail.split('@')[0],
+          phone: meta.phone || '',
+          role,
+          password: password || '123456',
+          created_at: new Date().toISOString()
+        };
+        await supabase.from('users').insert(newUserData);
+        return api.getMe(authUser.id);
+      }
+      throw new Error('البريد الإلكتروني غير مسجل، يرجى إنشاء حساب جديد');
+    }
+
+    // 3. Verify password if not already verified via supabase.auth
+    if (!authUser && password && userRow.password && userRow.password !== password) {
       throw new Error('كلمة المرور غير صحيحة');
     }
 
     const user = mapUser(userRow);
+
+    // 4. Check user penalties
     const pen = api.getUserPenaltyInfo(user.id);
     if (pen.status === 'suspended' || user.status === 'suspended') {
       throw new Error('تم إيقاف حسابك مؤقتاً بسبب مخالفة سياسات المنصة أو وجود شكوى قيد التحقيق. يرجى مراجعة إدارة خلصلى.');
@@ -337,78 +362,128 @@ export const api = {
     return { user, customer, provider };
   },
 
-  register: async (payload: any): Promise<{ user: User; customer: Customer | null; provider: Provider | null }> => {
-    if (payload.phone && api.isPhoneBanned(payload.phone)) {
+  register: async (payload: {
+    email: string;
+    password?: string;
+    name: string;
+    phone: string;
+    role: 'customer' | 'provider';
+    businessName?: string;
+    bio?: string;
+    categoryIds?: string[];
+    serviceIds?: string[];
+    areaIds?: string[];
+    experienceYears?: number;
+    address?: string;
+    notes?: string;
+  }): Promise<{ user: User; customer: Customer | null; provider: Provider | null }> => {
+    const cleanEmail = payload.email.trim().toLowerCase();
+    const cleanPhone = (payload.phone || '').trim();
+
+    if (cleanPhone && api.isPhoneBanned(cleanPhone)) {
       throw new Error('رقم الهاتف هذا محظور نهائياً من التسجيل في منصة خلصلى لمخالفة ميثاق المجتمع.');
     }
 
-    if (payload.role === 'provider') {
-      const res = await api.registerProvider({
-        name: payload.name,
-        email: payload.email,
-        phone: payload.phone,
-        password: payload.password,
-        businessName: payload.businessName || payload.name,
-        bio: payload.bio || '',
-        experienceYears: Number(payload.experienceYears || 1),
-        categoryIds: payload.categoryIds || [],
-        serviceIds: payload.serviceIds || [],
-        areaIds: payload.areaIds || []
-      });
-      return { user: res.user, customer: null, provider: res.provider };
+    // Check if email is already in users table
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .ilike('email', cleanEmail)
+      .maybeSingle();
+
+    if (existingUser) {
+      throw new Error('البريد الإلكتروني مسجل بالفعل. يرجى تسجيل الدخول بدلاً من ذلك.');
     }
 
-    const res = await api.registerCustomer({
-      name: payload.name,
-      email: payload.email,
-      phone: payload.phone,
-      password: payload.password,
-      address: payload.address || 'القاهرة',
-      notes: payload.notes
-    });
-    return { user: res.user, customer: res.customer, provider: null };
-  },
-
-  registerCustomer: async (data: { name: string; email: string; phone: string; password?: string; address: string; notes?: string }) => {
-    if (!supabase) {
-      return fallbackRequest<{ user: User; customer: Customer }>('/api/auth/register-customer', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
+    // Register in Supabase Auth
+    let authUserId: string | null = null;
+    if (payload.password) {
+      try {
+        const { data: authData } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password: payload.password,
+          options: {
+            data: {
+              name: payload.name,
+              phone: cleanPhone,
+              role: payload.role
+            }
+          }
+        });
+        if (authData?.user?.id) {
+          authUserId = authData.user.id;
+        }
+      } catch (authErr) {
+        console.warn('Supabase auth.signUp note:', authErr);
+      }
     }
 
-    const userId = 'usr_' + Math.random().toString(36).substring(2, 9);
+    const userId = authUserId || 'usr_' + Math.random().toString(36).substring(2, 9);
     const userPayload = {
       id: userId,
-      name: data.name,
-      email: data.email.trim().toLowerCase(),
-      phone: data.phone,
-      role: 'customer',
-      password: data.password || 'demo',
-      avatar_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80',
+      name: payload.name.trim(),
+      email: cleanEmail,
+      phone: cleanPhone,
+      role: payload.role,
+      password: payload.password || '123456',
+      avatar_url: payload.role === 'provider'
+        ? 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&auto=format&fit=crop&q=80'
+        : 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80',
       created_at: new Date().toISOString()
     };
 
     const { error: userError } = await supabase.from('users').insert(userPayload);
-    if (userError) throw new Error(userError.message);
-
-    const custId = 'cust_' + Math.random().toString(36).substring(2, 9);
-    const custPayload = {
-      id: custId,
-      user_id: userId,
-      address: data.address,
-      notes: data.notes || '',
-      created_at: new Date().toISOString()
-    };
-
-    const { error: custError } = await supabase.from('customers').insert(custPayload);
-    if (custError) throw new Error(custError.message);
+    if (userError) throw new Error(`تعذر حفظ بيانات المستخدم: ${userError.message}`);
 
     const user = mapUser(userPayload);
-    const customer = mapCustomer(custPayload, user);
     setApiUser(user.id);
 
-    return { user, customer };
+    let customer: Customer | null = null;
+    let provider: Provider | null = null;
+
+    if (payload.role === 'customer') {
+      const custId = 'cust_' + Math.random().toString(36).substring(2, 9);
+      const custPayload = {
+        id: custId,
+        user_id: userId,
+        address: payload.address || 'القاهرة',
+        notes: payload.notes || '',
+        created_at: new Date().toISOString()
+      };
+      const { error: custError } = await supabase.from('customers').insert(custPayload);
+      if (custError) throw new Error(`تعذر حفظ بيانات العميل: ${custError.message}`);
+      customer = mapCustomer(custPayload, user);
+    } else {
+      const provId = 'prov_' + Math.random().toString(36).substring(2, 9);
+      const provPayload = {
+        id: provId,
+        user_id: userId,
+        business_name: payload.businessName || payload.name,
+        bio: payload.bio || '',
+        experience_years: Number(payload.experienceYears || 1),
+        category_ids: payload.categoryIds || [],
+        service_ids: payload.serviceIds || [],
+        area_ids: payload.areaIds || [],
+        is_verified: false,
+        is_active: true,
+        average_rating: 5.0,
+        total_reviews: 0,
+        completed_jobs: 0,
+        created_at: new Date().toISOString()
+      };
+      const { error: provError } = await supabase.from('providers').insert(provPayload);
+      if (provError) throw new Error(`تعذر حفظ بيانات الفني: ${provError.message}`);
+      provider = mapProvider(provPayload, user);
+    }
+
+    return { user, customer, provider };
+  },
+
+  registerCustomer: async (data: { name: string; email: string; phone: string; password?: string; address: string; notes?: string }) => {
+    return api.register({
+      ...data,
+      role: 'customer'
+    });
   },
 
   registerProvider: async (data: {
@@ -423,99 +498,30 @@ export const api = {
     serviceIds: string[];
     areaIds: string[];
   }) => {
-    if (!supabase) {
-      return fallbackRequest<{ user: User; provider: Provider }>('/api/auth/register-provider', {
-        method: 'POST',
-        body: JSON.stringify(data)
-      });
-    }
-
-    const userId = 'usr_' + Math.random().toString(36).substring(2, 9);
-    const userPayload = {
-      id: userId,
-      name: data.name,
-      email: data.email.trim().toLowerCase(),
-      phone: data.phone,
-      role: 'provider',
-      password: data.password || 'demo',
-      avatar_url: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&auto=format&fit=crop&q=80',
-      created_at: new Date().toISOString()
-    };
-
-    const { error: userError } = await supabase.from('users').insert(userPayload);
-    if (userError) throw new Error(userError.message);
-
-    const provId = 'prov_' + Math.random().toString(36).substring(2, 9);
-    const provPayload = {
-      id: provId,
-      user_id: userId,
-      business_name: data.businessName,
-      bio: data.bio,
-      experience_years: data.experienceYears,
-      category_ids: data.categoryIds,
-      service_ids: data.serviceIds,
-      area_ids: data.areaIds,
-      is_verified: false,
-      is_active: true,
-      average_rating: 5.0,
-      total_reviews: 0,
-      completed_jobs: 0,
-      created_at: new Date().toISOString()
-    };
-
-    const { error: provError } = await supabase.from('providers').insert(provPayload);
-    if (provError) throw new Error(provError.message);
-
-    const user = mapUser(userPayload);
-    const provider = mapProvider(provPayload, user);
-    setApiUser(user.id);
-
-    return { user, provider };
+    return api.register({
+      ...data,
+      role: 'provider'
+    });
   },
 
-  quickSwitch: async (role: 'customer' | 'provider' | 'admin') => {
-    if (!supabase) {
-      return fallbackRequest<{ user: User; customer: Customer | null; provider: Provider | null }>(`/api/auth/switch/${role}`, {
-        method: 'POST'
-      });
+  logout: async () => {
+    setApiUser(null);
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // ignore
     }
+  },
 
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('*')
-      .eq('role', role)
-      .limit(1)
-      .single();
+  getMe: async (userIdOverride?: string) => {
+    const targetUserId = userIdOverride || currentUserId;
+    if (!targetUserId) throw new Error('يرجى تسجيل الدخول أولاً');
 
-    if (!userRow) throw new Error(`لم يتم العثور على حساب تجريبي برتبة ${role}`);
+    const { data: userRow, error } = await supabase.from('users').select('*').eq('id', targetUserId).maybeSingle();
+    if (error || !userRow) throw new Error('المستخدم غير موجود');
 
     const user = mapUser(userRow);
     setApiUser(user.id);
-
-    let customer: Customer | null = null;
-    let provider: Provider | null = null;
-
-    if (role === 'customer') {
-      const { data: custRow } = await supabase.from('customers').select('*').eq('user_id', user.id).maybeSingle();
-      if (custRow) customer = mapCustomer(custRow, user);
-    } else if (role === 'provider') {
-      const { data: provRow } = await supabase.from('providers').select('*').eq('user_id', user.id).maybeSingle();
-      if (provRow) provider = mapProvider(provRow, user);
-    }
-
-    return { user, customer, provider };
-  },
-
-  getMe: async () => {
-    if (!supabase) {
-      return fallbackRequest<{ user: User; customer: Customer | null; provider: Provider | null }>('/api/auth/me');
-    }
-    if (!currentUserId) throw new Error('يرجى تسجيل الدخول أولاً');
-
-    const { data: userRow } = await supabase.from('users').select('*').eq('id', currentUserId).maybeSingle();
-    if (!userRow) throw new Error('المستخدم غير موجود');
-
-    const user = mapUser(userRow);
     let customer: Customer | null = null;
     let provider: Provider | null = null;
 
@@ -1586,53 +1592,7 @@ export const api = {
       console.warn('LocalStorage error:', e);
     }
 
-    const defaultDisputes: Dispute[] = [
-      {
-        id: 'disp_seed_1',
-        bookingId: 'bk_seed_pending_1',
-        bookingNumber: 'EGY-10025',
-        userId: 'usr_customer1',
-        userName: 'سارة أحمد حسن',
-        userPhone: '01123456789',
-        userRole: 'customer',
-        customerUserId: 'usr_customer1',
-        customerName: 'سارة أحمد حسن',
-        customerPhone: '01123456789',
-        providerId: 'prov_1',
-        providerUserId: 'usr_provider1',
-        providerName: 'الأسطى محمود حسن',
-        providerPhone: '01019876543',
-        reasonCategory: 'تأخر عن الموعد',
-        details: 'تم تحديد موعد الزيارة الساعة الواحدة ظهراً ولم يحضر الفني ولم يتم الرد على الاتصالات الهاتفية لتوضيح سبب التأخير.',
-        photoUrl: 'https://images.unsplash.com/photo-1577563908411-5077b6dc7624?w=600&auto=format&fit=crop&q=80',
-        status: 'pending',
-        createdAt: new Date(Date.now() - 3600000 * 5).toISOString()
-      },
-      {
-        id: 'disp_seed_2',
-        bookingId: 'bk_seed_historical_1',
-        bookingNumber: 'EGY-10022',
-        userId: 'usr_provider2',
-        userName: 'المهندس أحمد الشافعي',
-        userPhone: '01155554321',
-        userRole: 'provider',
-        customerUserId: 'usr_customer2',
-        customerName: 'طارق عبد المنعم',
-        customerPhone: '01234567890',
-        providerId: 'prov_2',
-        providerUserId: 'usr_provider2',
-        providerName: 'المهندس أحمد الشافعي',
-        providerPhone: '01155554321',
-        reasonCategory: 'عنوان وهمي',
-        details: 'توجهت إلى العنوان المذكور في الطلب وتبين أنه غير صحيح والعمارة غير موجودة، ولم يرد العميل على 4 محاولات اتصال.',
-        status: 'in_review',
-        createdAt: new Date(Date.now() - 3600000 * 24).toISOString()
-      }
-    ];
-    try {
-      localStorage.setItem('khalasly_disputes', JSON.stringify(defaultDisputes));
-    } catch (e) {}
-    return defaultDisputes;
+    return [];
   },
 
   updateDisputeStatus: async (id: string, status: 'pending' | 'in_review' | 'resolved' | 'dismissed', adminNotes?: string): Promise<Dispute | null> => {

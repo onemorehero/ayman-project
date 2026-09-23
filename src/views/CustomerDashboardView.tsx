@@ -111,6 +111,20 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
     return true;
   });
 
+  if (!user) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-16 text-center space-y-4" dir="rtl">
+        <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto shadow-xs">
+          <Calendar className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-black text-slate-900">طلبات الصيانة والخدمات</h2>
+        <p className="text-xs text-slate-600 leading-relaxed">
+          يرجى تسجيل الدخول أو إنشاء حساب لعرض ومتابعة قائمة طلباتك والتواصل مع الفنيين.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header Profile Section */}

@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import type { User, Customer, Provider, AppNotification } from '../types.js';
-import { api, setApiUser } from '../lib/api.js';
+import { api, setApiUser, supabase } from '../lib/api.js';
 
 interface AuthContextType {
   user: User | null;
   customer: Customer | null;
   provider: Provider | null;
+  session: Session | null;
   isLoading: boolean;
   isFirstLogin: boolean;
   dismissTour: () => void;
@@ -13,9 +15,9 @@ interface AuthContextType {
   notifications: AppNotification[];
   unreadNotificationsCount: number;
   login: (email: string, password?: string) => Promise<void>;
+  signup: (payload: any) => Promise<void>;
   register: (payload: any) => Promise<void>;
-  logout: () => void;
-  switchRole: (role: 'customer' | 'provider' | 'admin') => Promise<void>;
+  logout: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
@@ -28,47 +30,103 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [provider, setProvider] = useState<Provider | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  // Load initial user session or default to demo customer
-  useEffect(() => {
-    const savedUserId = localStorage.getItem('khalasly_user_id') || localStorage.getItem('egypt_marketplace_user_id') || 'usr_customer1';
-    setApiUser(savedUserId);
-
-    api.getMe()
-      .then(res => {
-        setUser(res.user);
-        setCustomer(res.customer);
-        setProvider(res.provider);
-        setApiUser(res.user.id);
-        localStorage.setItem('khalasly_user_id', res.user.id);
-
-        // Check if user has an uncompleted first-registration tour
-        const isPendingTour = localStorage.getItem('khalasly_tour_pending_' + res.user.id);
-        const isDismissed = localStorage.getItem('khalasly_tour_completed_' + res.user.id);
-        if (isPendingTour === 'true' && !isDismissed) {
-          setIsFirstLogin(true);
-        }
-      })
-      .catch(() => {
-        // Fallback to customer switch
-        api.quickSwitch('customer').then(res => {
+  const loadUserProfile = useCallback(async (userId: string, email?: string) => {
+    try {
+      setApiUser(userId);
+      const res = await api.getMe(userId);
+      setUser(res.user);
+      setCustomer(res.customer);
+      setProvider(res.provider);
+      localStorage.setItem('khalasly_user_id', res.user.id);
+      return res;
+    } catch (err) {
+      if (email) {
+        try {
+          const res = await api.login(email);
           setUser(res.user);
           setCustomer(res.customer);
           setProvider(res.provider);
-          setApiUser(res.user.id);
           localStorage.setItem('khalasly_user_id', res.user.id);
-        });
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+          return res;
+        } catch {
+          // ignore
+        }
+      }
+      return null;
+    }
   }, []);
 
+  // Initialize real session from Supabase on mount
+  useEffect(() => {
+    let isMounted = true;
+
+    async function initSession() {
+      try {
+        if (supabase) {
+          const { data } = await supabase.auth.getSession();
+          if (data?.session && isMounted) {
+            setSession(data.session);
+            if (data.session.user) {
+              await loadUserProfile(data.session.user.id, data.session.user.email);
+            }
+          }
+        }
+
+        // If no active Supabase Auth session, check saved user id
+        if (!user) {
+          const savedUserId = localStorage.getItem('khalasly_user_id');
+          if (savedUserId && isMounted) {
+            await loadUserProfile(savedUserId);
+          }
+        }
+      } catch (err) {
+        console.warn('Session init warning:', err);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    initSession();
+
+    // Listen to Supabase Auth state changes
+    let authSubscription: { unsubscribe: () => void } | null = null;
+    if (supabase) {
+      const { data } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+        if (!isMounted) return;
+        setSession(newSession);
+
+        if (event === 'SIGNED_IN' && newSession?.user) {
+          await loadUserProfile(newSession.user.id, newSession.user.email);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setCustomer(null);
+          setProvider(null);
+          setNotifications([]);
+          setApiUser(null);
+          localStorage.removeItem('khalasly_user_id');
+        }
+      });
+      authSubscription = data.subscription;
+    }
+
+    return () => {
+      isMounted = false;
+      authSubscription?.unsubscribe();
+    };
+  }, [loadUserProfile]);
+
   const refreshNotifications = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setNotifications([]);
+      return;
+    }
     try {
       const list = await api.getNotifications(user.id);
       setNotifications(list);
@@ -80,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = useCallback(async () => {
     if (!user) return;
     try {
-      const res = await api.getMe();
+      const res = await api.getMe(user.id);
       setUser(res.user);
       setCustomer(res.customer);
       setProvider(res.provider);
@@ -89,11 +147,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  // Periodic notification check every 15s
+  // Periodic notification check every 20s
   useEffect(() => {
     if (!user) return;
     refreshNotifications();
-    const interval = setInterval(refreshNotifications, 15000);
+    const interval = setInterval(refreshNotifications, 20000);
     return () => clearInterval(interval);
   }, [user, refreshNotifications]);
 
@@ -107,7 +165,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setApiUser(res.user.id);
       localStorage.setItem('khalasly_user_id', res.user.id);
 
-      // Only show tour if they had registered and not completed it
+      // Check for first login tour
       const isPendingTour = localStorage.getItem('khalasly_tour_pending_' + res.user.id);
       const isDismissed = localStorage.getItem('khalasly_tour_completed_' + res.user.id);
       if (isPendingTour === 'true' && !isDismissed) {
@@ -122,7 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (payload: any) => {
+  const signup = async (payload: any) => {
     setIsLoading(true);
     try {
       const res = await api.register(payload);
@@ -132,7 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setApiUser(res.user.id);
       localStorage.setItem('khalasly_user_id', res.user.id);
 
-      // Mark this user as newly registered to trigger role-based tour strictly on first signup
+      // Mark newly registered user for guided tour
       setIsFirstLogin(true);
       localStorage.setItem('khalasly_tour_pending_' + res.user.id, 'true');
 
@@ -141,6 +199,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     }
   };
+
+  const register = signup;
 
   const dismissTour = () => {
     setIsFirstLogin(false);
@@ -154,28 +214,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsFirstLogin(true);
   };
 
-  const logout = () => {
-    setUser(null);
-    setCustomer(null);
-    setProvider(null);
-    setNotifications([]);
-    setIsFirstLogin(false);
-    setApiUser(null);
-    localStorage.removeItem('khalasly_user_id');
-  };
-
-  const switchRole = async (role: 'customer' | 'provider' | 'admin') => {
+  const logout = async () => {
     setIsLoading(true);
     try {
-      const res = await api.quickSwitch(role);
-      setUser(res.user);
-      setCustomer(res.customer);
-      setProvider(res.provider);
-      setApiUser(res.user.id);
-      localStorage.setItem('khalasly_user_id', res.user.id);
-      const notifs = await api.getNotifications(res.user.id);
-      setNotifications(notifs);
+      await api.logout();
+    } catch (e) {
+      console.warn('Logout error:', e);
     } finally {
+      setUser(null);
+      setCustomer(null);
+      setProvider(null);
+      setSession(null);
+      setNotifications([]);
+      setIsFirstLogin(false);
+      setApiUser(null);
+      localStorage.removeItem('khalasly_user_id');
       setIsLoading(false);
     }
   };
@@ -207,6 +260,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         customer,
         provider,
+        session,
         isLoading,
         isFirstLogin,
         dismissTour,
@@ -214,9 +268,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         notifications,
         unreadNotificationsCount,
         login,
+        signup,
         register,
         logout,
-        switchRole,
         refreshNotifications,
         markNotificationAsRead,
         markAllNotificationsAsRead,

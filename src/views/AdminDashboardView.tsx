@@ -32,7 +32,7 @@ import { CategoryIcon } from '../components/CategoryIcon.js';
 import type { Category, Service, Location, Provider, Booking, Customer, Review, User, Dispute } from '../types.js';
 
 export function AdminDashboardView() {
-  const { user, quickSwitch } = useAuth();
+  const { user } = useAuth();
   const [stats, setStats] = useState<any>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -287,14 +287,9 @@ export function AdminDashboardView() {
         <p className="text-xs text-slate-600 leading-relaxed max-w-md mx-auto">
           هذه الصفحة مخصصة لإدارة منصة خلصلى (Admin) لإدارة الفئات والخدمات والفنيين والنزاعات. حسابك الحالي مسجل بدور: <span className="font-black text-slate-900">{user ? (user.role === 'provider' ? 'مقدم خدمة' : 'عميل') : 'زائر'}</span>.
         </p>
-        <button
-          type="button"
-          onClick={() => quickSwitch('admin')}
-          className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-xs shadow-md shadow-emerald-600/20 transition-all inline-flex items-center gap-2 cursor-pointer"
-        >
-          <Shield className="w-4 h-4 text-emerald-200" />
-          <span>التبديل إلى حساب مسؤول المنصة</span>
-        </button>
+        <p className="text-xs text-slate-500 font-medium">
+          يرجى تسجيل الدخول بحساب مسؤول (Admin) للوصول إلى أدوات الإدارة.
+        </p>
       </div>
     );
   }

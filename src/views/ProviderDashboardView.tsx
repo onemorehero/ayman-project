@@ -239,6 +239,22 @@ export function ProviderDashboardView() {
   const completedBookings = bookings.filter(b => b.status === 'COMPLETED');
   const pendingBookings = bookings.filter(b => b.status === 'PENDING');
 
+  if (!user || user.role !== 'provider') {
+    return (
+      <div className="max-w-md mx-auto px-4 py-16 text-center space-y-4" dir="rtl">
+        <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-3xl flex items-center justify-center mx-auto shadow-xs">
+          <Briefcase className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-black text-slate-900">لوحة تحكم الفنيين ومقدمي الخدمات</h2>
+        <p className="text-xs text-slate-600 leading-relaxed">
+          {user
+            ? `حسابك الحالي مسجل بدور "${user.role === 'customer' ? 'عميل' : 'إدارة'}". يرجى تسجيل الدخول بحساب فني لإدارة الطلبات وملفك الشخصي.`
+            : 'يرجى تسجيل الدخول بحساب فني للوصول إلى لوحة التحكم واستقبال طلبات الصيانة.'}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* Header Profile Section */}
