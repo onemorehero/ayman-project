@@ -14,13 +14,16 @@ import {
   ExternalLink,
   Zap,
   Sparkles,
-  ChevronLeft
+  ChevronLeft,
+  Edit3
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { api } from '../lib/api.js';
 import { ReviewModal } from '../components/ReviewModal.js';
 import { DisputeModal } from '../components/DisputeModal.js';
 import { BookingModal, type InitialBookingData } from '../components/BookingModal.js';
+import { EditProfileModal } from '../components/EditProfileModal.js';
+import { UserAvatar } from '../components/UserAvatar.js';
 import type { Booking, Provider } from '../types.js';
 
 interface Props {
@@ -28,10 +31,11 @@ interface Props {
 }
 
 export function CustomerDashboardView({ onNavigateToProvider }: Props) {
-  const { user, customer } = useAuth();
+  const { user, customer, updateCustomerProfile } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'accepted' | 'pending' | 'completed'>('all');
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   // Modals state
   const [selectedBookingForReview, setSelectedBookingForReview] = useState<Booking | null>(null);
@@ -130,13 +134,34 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
       {/* Header Profile Section */}
       <div className="bg-white rounded-3xl p-6 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-5 text-center sm:text-right">
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          <img
-            src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
-            alt={user?.name}
-            className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shadow-xs"
-          />
-          <div className="space-y-1">
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900">{user?.name || 'حساب العميل'}</h1>
+          <div className="relative group">
+            <UserAvatar
+              src={user?.avatarUrl}
+              name={user?.name}
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs"
+              iconClassName="w-8 h-8 sm:w-10 sm:h-10 text-slate-400"
+            />
+            <button
+              type="button"
+              onClick={() => setIsEditProfileOpen(true)}
+              className="absolute -bottom-1 -left-1 w-7 h-7 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 shadow-sm flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
+              title="تعديل الصورة والبيانات"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900">{user?.name || 'حساب العميل'}</h1>
+              <button
+                type="button"
+                onClick={() => setIsEditProfileOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-emerald-700 font-bold text-xs shadow-xs transition-all cursor-pointer active:scale-95"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>تعديل الحساب</span>
+              </button>
+            </div>
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs text-slate-500 font-medium">
               <span>{user?.phone || 'بدون هاتف مسجل'}</span>
               <span>·</span>
@@ -233,10 +258,10 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
                 {/* Top Row: Provider info, Status, & Subtle Dispute Action */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={b.provider?.user?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
-                      alt={b.provider?.businessName}
-                      className="w-12 h-12 rounded-2xl object-cover border border-slate-200 shrink-0"
+                    <UserAvatar
+                      src={b.provider?.user?.avatarUrl}
+                      name={b.provider?.businessName}
+                      className="w-12 h-12 rounded-2xl border border-slate-200 shrink-0"
                     />
                     <div>
                       <button
@@ -362,10 +387,10 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
                             className="min-w-[240px] max-w-[260px] shrink-0 bg-white rounded-2xl p-3.5 border border-amber-200 shadow-xs hover:-translate-y-1 hover:shadow-md transition-all duration-300 flex flex-col justify-between gap-3 snap-start"
                           >
                             <div className="flex items-center gap-3">
-                              <img
-                                src={alt.user?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                                alt={alt.businessName}
-                                className="w-10 h-10 rounded-xl object-cover shrink-0 border border-slate-200"
+                              <UserAvatar
+                                src={alt.user?.avatarUrl}
+                                name={alt.businessName}
+                                className="w-10 h-10 rounded-xl shrink-0 border border-slate-200"
                               />
                               <div className="min-w-0">
                                 <p className="text-xs font-bold text-slate-900 truncate">{alt.businessName}</p>
@@ -518,6 +543,19 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
           }}
         />
       )}
+
+      {/* Edit Customer Profile Modal */}
+      <EditProfileModal
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        initialName={user?.name || ''}
+        initialPhone={user?.phone || ''}
+        initialAddress={customer?.address || ''}
+        initialAvatarUrl={user?.avatarUrl || ''}
+        onSave={async (data) => {
+          await updateCustomerProfile(data);
+        }}
+      />
     </div>
   );
 }

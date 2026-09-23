@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { Logo } from './Logo.js';
+import { UserAvatar } from './UserAvatar.js';
 
 interface Props {
   activeView: string;
@@ -202,10 +203,11 @@ export function Header({
                       {getRoleBadge(user.role)}
                     </div>
                   </div>
-                  <img
-                    src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                    alt={user.name}
-                    className="w-7 h-7 rounded-lg object-cover border border-slate-200"
+                  <UserAvatar
+                    src={user.avatarUrl}
+                    name={user.name}
+                    className="w-7 h-7 rounded-lg border border-slate-200"
+                    iconClassName="w-4 h-4 text-slate-400"
                   />
                 </button>
 
@@ -247,10 +249,11 @@ export function Header({
             {user && (
               <div className="px-4 py-2.5 mb-2 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <img
-                    src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                    alt={user.name}
-                    className="w-9 h-9 rounded-xl object-cover border border-slate-200"
+                  <UserAvatar
+                    src={user.avatarUrl}
+                    name={user.name}
+                    className="w-9 h-9 rounded-xl border border-slate-200"
+                    iconClassName="w-5 h-5 text-slate-400"
                   />
                   <div>
                     <div className="font-bold text-xs text-slate-900">{user.name}</div>

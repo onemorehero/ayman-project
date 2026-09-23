@@ -78,7 +78,7 @@ function mapUser(row: any): User {
     email: row.email,
     phone: row.phone,
     role: row.role,
-    avatarUrl: row.avatar_url || row.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80',
+    avatarUrl: row.avatar_url || row.avatarUrl || '',
     password: row.password,
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
     status: row.status || 'active',
@@ -250,7 +250,7 @@ function mapReview(row: any): Review {
     repliedAt: row.replied_at || row.repliedAt,
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
     customerName: row.customer_name || row.customerName || 'عميل المنصة',
-    customerAvatar: row.customer_avatar || row.customerAvatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100'
+    customerAvatar: row.customer_avatar || row.customerAvatar || ''
   };
 }
 
@@ -428,7 +428,7 @@ export const api = {
       password: payload.password || '123456',
       avatar_url: payload.role === 'provider'
         ? 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&auto=format&fit=crop&q=80'
-        : 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&auto=format&fit=crop&q=80',
+        : null,
       created_at: new Date().toISOString()
     };
 
@@ -477,6 +477,81 @@ export const api = {
     }
 
     return { user, customer, provider };
+  },
+
+  updateCustomerProfile: async (
+    userId: string,
+    data: {
+      name: string;
+      phone: string;
+      address?: string;
+      avatarUrl?: string;
+    }
+  ): Promise<{ user: User; customer: Customer | null }> => {
+    const userUpdates: any = {
+      name: data.name.trim(),
+      phone: data.phone.trim(),
+      avatar_url: data.avatarUrl !== undefined && data.avatarUrl.trim().length > 0 ? data.avatarUrl.trim() : null
+    };
+
+    const { data: updatedUserRow, error: uErr } = await supabase
+      .from('users')
+      .update(userUpdates)
+      .eq('id', userId)
+      .select('*')
+      .single();
+
+    if (uErr) throw new Error(`تعذر حفظ بيانات المستخدم: ${uErr.message}`);
+
+    let customer: Customer | null = null;
+    if (data.address !== undefined) {
+      const { data: existingCust } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingCust) {
+        const { data: updatedCustRow, error: cErr } = await supabase
+          .from('customers')
+          .update({ address: data.address.trim() })
+          .eq('user_id', userId)
+          .select('*')
+          .single();
+        if (!cErr && updatedCustRow) {
+          customer = mapCustomer(updatedCustRow, mapUser(updatedUserRow));
+        }
+      } else {
+        const { data: newCustRow, error: cErr } = await supabase
+          .from('customers')
+          .insert({
+            id: 'cust_' + Math.random().toString(36).substring(2, 9),
+            user_id: userId,
+            address: data.address.trim(),
+            notes: '',
+            created_at: new Date().toISOString()
+          })
+          .select('*')
+          .single();
+        if (!cErr && newCustRow) {
+          customer = mapCustomer(newCustRow, mapUser(updatedUserRow));
+        }
+      }
+    }
+
+    if (!customer) {
+      const { data: custRow } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (custRow) {
+        customer = mapCustomer(custRow, mapUser(updatedUserRow));
+      }
+    }
+
+    const user = mapUser(updatedUserRow);
+    return { user, customer };
   },
 
   registerCustomer: async (data: { name: string; email: string; phone: string; password?: string; address: string; notes?: string }) => {

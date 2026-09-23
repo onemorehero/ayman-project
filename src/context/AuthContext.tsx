@@ -22,6 +22,12 @@ interface AuthContextType {
   markNotificationAsRead: (id: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateCustomerProfile: (data: {
+    name: string;
+    phone: string;
+    address?: string;
+    avatarUrl?: string;
+  }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -146,6 +152,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ignore
     }
   }, [user]);
+
+  const updateCustomerProfile = async (data: {
+    name: string;
+    phone: string;
+    address?: string;
+    avatarUrl?: string;
+  }) => {
+    if (!user) throw new Error('يرجى تسجيل الدخول أولاً');
+    setIsLoading(true);
+    try {
+      const res = await api.updateCustomerProfile(user.id, data);
+      setUser(res.user);
+      if (res.customer) {
+        setCustomer(res.customer);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Periodic notification check every 20s
   useEffect(() => {
@@ -274,7 +299,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         refreshNotifications,
         markNotificationAsRead,
         markAllNotificationsAsRead,
-        refreshProfile
+        refreshProfile,
+        updateCustomerProfile
       }}
     >
       {children}

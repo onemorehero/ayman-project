@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { BookingModal } from '../components/BookingModal.js';
+import { UserAvatar } from '../components/UserAvatar.js';
 import type { Provider, Service, Review } from '../types.js';
 
 interface Props {
@@ -398,10 +399,11 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
                 <div key={rev.id} className="py-4 space-y-2 first:pt-0 last:pb-0">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                      <img
-                        src={rev.customerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
-                        alt={rev.customerName || 'عميل'}
-                        className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                      <UserAvatar
+                        src={rev.customerAvatar}
+                        name={rev.customerName}
+                        className="w-8 h-8 rounded-full border border-slate-200"
+                        iconClassName="w-4 h-4 text-slate-400"
                       />
                       <div>
                         <p className="text-xs font-bold text-slate-900">{rev.customerName || 'عميل خلصلى'}</p>

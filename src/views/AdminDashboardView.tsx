@@ -29,6 +29,7 @@ import {
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.js';
 import { CategoryIcon } from '../components/CategoryIcon.js';
+import { UserAvatar } from '../components/UserAvatar.js';
 import type { Category, Service, Location, Provider, Booking, Customer, Review, User, Dispute } from '../types.js';
 
 export function AdminDashboardView() {
@@ -1035,10 +1036,11 @@ export function AdminDashboardView() {
                     <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="p-3.5">
                         <div className="flex items-center gap-2.5">
-                          <img
-                            src={c.user?.avatarUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100'}
-                            alt={c.user?.name}
-                            className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                          <UserAvatar
+                            src={c.user?.avatarUrl}
+                            name={c.user?.name}
+                            className="w-8 h-8 rounded-full border border-slate-200"
+                            iconClassName="w-4 h-4 text-slate-400"
                           />
                           <p className="font-bold text-slate-900">{c.user?.name || 'عميل'}</p>
                         </div>
@@ -1090,10 +1092,11 @@ export function AdminDashboardView() {
                     <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
                       <td className="p-3.5">
                         <div className="flex items-center gap-2">
-                          <img
-                            src={r.customerAvatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100'}
-                            alt={r.customerName}
-                            className="w-7 h-7 rounded-full object-cover border border-slate-200"
+                          <UserAvatar
+                            src={r.customerAvatar}
+                            name={r.customerName}
+                            className="w-7 h-7 rounded-full border border-slate-200"
+                            iconClassName="w-3.5 h-3.5 text-slate-400"
                           />
                           <span className="font-bold text-slate-900">{r.customerName}</span>
                         </div>
