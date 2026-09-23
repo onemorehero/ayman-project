@@ -94,8 +94,9 @@ export interface NotificationTriggerPayload {
  */
 export async function dispatchNotificationTrigger(payload: NotificationTriggerPayload): Promise<void> {
   const webhookUrl =
+    ((import.meta as any).env?.VITE_NOTIFICATION_WEBHOOK as string | undefined)?.trim() ||
     ((import.meta as any).env?.VITE_NOTIFICATION_WEBHOOK_URL as string | undefined)?.trim() ||
-    (supabaseUrl ? `${supabaseUrl}/functions/v1/dispatch-notification` : '/api/notifications/dispatch');
+    'https://onemorehero-my-n8n-app.hf.space/webhook/9e9ef1f1-48b4-4cfe-99f4-75b52bc42e61';
 
   // Engineering Log: Trace the dual trigger payload
   console.groupCollapsed(`[Notification Pipeline] 🚀 ${payload.eventType} => ${payload.target}`);
