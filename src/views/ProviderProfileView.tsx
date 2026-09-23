@@ -1,25 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import {
   Star,
-  ShieldCheck,
   MapPin,
-  Clock,
-  Phone,
+  ShieldCheck,
   Calendar,
   CheckCircle2,
-  Share2,
-  Copy,
-  Check,
-  AlertTriangle,
-  Images,
+  Clock,
   ArrowRight,
+  Phone,
+  MessageCircle,
+  Share2,
+  Check,
+  Sparkles,
   Zap,
-  MessageSquare,
-  Sparkles
+  AlertTriangle,
+  ExternalLink
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { BookingModal } from '../components/BookingModal.js';
-import type { Provider, Service, Location, Category, Review } from '../types.js';
+import type { Provider, Service, Review } from '../types.js';
 
 interface Props {
   providerId: string;
@@ -28,39 +27,36 @@ interface Props {
 }
 
 export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Props) {
-  const [provider, setProvider] = useState<(Provider & {
-    services: Service[];
-    categories: Category[];
-    areas: Location[];
-    reviews: Review[];
-  }) | null>(null);
-
+  const [provider, setProvider] = useState<Provider | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Tabs
+  const [activeTab, setActiveTab] = useState<'services' | 'reviews' | 'photos'>('services');
+
+  // Booking Modal
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string | undefined>(undefined);
-  const [activeTab, setActiveTab] = useState<'services' | 'photos' | 'reviews'>('services');
-  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
     setError(null);
 
-    api.getProviderBySlugOrId(providerId)
+    api.getProviderById(providerId)
       .then(data => {
         if (!isMounted) return;
-        setProvider(data as any);
-
-        // Update URL to clean /provider/:slug without reloading
-        const targetSlug = data.slug || data.id;
-        if (window.location.pathname !== `/provider/${targetSlug}`) {
-          window.history.replaceState({ providerId: data.id }, '', `/provider/${targetSlug}`);
+        if (data) {
+          setProvider(data);
+        } else {
+          setError('لم يتم العثور على الفني المطلوب');
         }
       })
       .catch(err => {
         if (!isMounted) return;
-        setError(err.message || 'فشل تحميل بيانات مقدم الخدمة');
+        console.error('Error fetching provider:', err);
+        setError('تعذر تحميل بيانات الفني');
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -71,14 +67,23 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
     };
   }, [providerId]);
 
-  const handleCopyLink = () => {
-    const slug = provider?.slug || provider?.id || providerId;
-    const url = `${window.location.origin}/provider/${slug}`;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url).then(() => {
-        setCopiedLink(true);
-        setTimeout(() => setCopiedLink(false), 2500);
-      });
+  const handleCopyLink = async () => {
+    const fullUrl = window.location.origin + `/provider/${provider?.slug || provider?.id}`;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(fullUrl);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = fullUrl;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 3000);
+    } catch (err) {
+      console.error('Failed to copy link:', err);
     }
   };
 
@@ -87,16 +92,22 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
     setIsBookingModalOpen(true);
   };
 
+  // Prepare open WhatsApp Link (No restrictions)
+  const getWhatsAppUrl = () => {
+    const rawPhone = provider?.user?.phone || '01000000000';
+    const cleanPhone = rawPhone.replace(/\D/g, '').replace(/^0/, '20');
+    const msg = `مرحباً أسطى ${provider?.businessName || ''}، أود الاستفسار عن خدمة صيانة منزلية من خلال منصة خلصلى.`;
+    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+  };
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        <div className="h-5 w-32 bg-slate-200 rounded animate-pulse" />
-        <div className="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 space-y-6 animate-pulse">
+        <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-pulse space-y-4">
           <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="w-24 h-24 rounded-2xl bg-slate-200 shrink-0" />
-            <div className="flex-1 space-y-3 w-full text-center sm:text-right">
-              <div className="h-7 bg-slate-200 rounded w-1/2 mx-auto sm:mx-0" />
-              <div className="h-4 bg-slate-100 rounded w-1/3 mx-auto sm:mx-0" />
+            <div className="w-24 h-24 rounded-3xl bg-slate-200 shrink-0" />
+            <div className="space-y-2 flex-1 text-center sm:text-right w-full">
+              <div className="h-6 bg-slate-200 rounded w-1/3 mx-auto sm:mx-0" />
               <div className="h-4 bg-slate-100 rounded w-2/3 mx-auto sm:mx-0" />
             </div>
           </div>
@@ -119,7 +130,7 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
         <button
           type="button"
           onClick={onBack}
-          className="h-11 px-6 rounded-2xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-500 active:scale-95 transition-all inline-flex items-center gap-2 shadow-md shadow-emerald-600/20"
+          className="h-11 px-6 rounded-2xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-500 active:scale-95 transition-all inline-flex items-center gap-2 shadow-md shadow-emerald-600/20 cursor-pointer"
         >
           <ArrowRight className="w-4 h-4" />
           <span>العودة لقائمة الفنيين</span>
@@ -128,9 +139,12 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
     );
   }
 
-  const services = provider.services || [];
+  const rawServices = provider.services || [];
+  // Catalog limit: Top 3 services
+  const services = rawServices.slice(0, 3);
   const areas = provider.areas || [];
   const reviews = provider.reviews || [];
+  const providerPhone = provider.user?.phone || '01000000000';
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
@@ -139,7 +153,7 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white border border-slate-200/80 text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 active:scale-95 transition-all shadow-xs"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white border border-slate-200/80 text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 active:scale-95 transition-all shadow-xs cursor-pointer"
         >
           <ArrowRight className="w-4 h-4" />
           <span>تصفح كل الفنيين</span>
@@ -165,7 +179,7 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
         </button>
       </div>
 
-      {/* Hero Card */}
+      {/* Hero Card - Open Catalog Identity */}
       <div className="bg-white rounded-3xl border border-slate-100/80 p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-right">
           <img
@@ -223,19 +237,52 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
         {/* Free platform reassurance notice */}
         <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 flex items-center gap-2.5 text-xs text-emerald-950 font-medium">
           <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>منصة خلصلى مجانية 100%: تواصل مباشر مع الفني بدون أي عمولات أو رسوم وساطة مستقطعة.</span>
+          <span>منصة خلصلى كتالوج مفتوح ومجاني 100%: تواصل مباشر بدون أي وسطاء أو استقطاعات مالية.</span>
         </div>
 
-        {/* Large Prominent Mobile-First CTA Button */}
-        <div>
-          <button
-            type="button"
-            onClick={() => handleBookService()}
-            className="w-full h-14 sm:h-16 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-base sm:text-lg shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
-          >
-            <span>طلب خدمة فوري من {provider.businessName}</span>
-            <ArrowRight className="w-5 h-5 rotate-180" />
-          </button>
+        {/* Open Contact Information & Action Bar (100% Public - No Hidden Condition) */}
+        <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-700">بيانات التواصل المباشر مع الفني:</span>
+            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/60 px-2.5 py-0.5 rounded-full">
+              متاح للاتصال الفوري
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Phone Call Button */}
+            <a
+              href={`tel:${providerPhone}`}
+              className="h-13 px-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 active:scale-95 text-slate-900 font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-xs transition-all cursor-pointer"
+            >
+              <Phone className="w-4 h-4 text-emerald-600" />
+              <div className="text-right">
+                <span className="block text-[10px] text-slate-400 font-medium leading-none mb-0.5">اتصال هاتفي</span>
+                <span className="font-mono text-xs sm:text-sm">{providerPhone}</span>
+              </div>
+            </a>
+
+            {/* Direct WhatsApp Button */}
+            <a
+              href={getWhatsAppUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-13 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span>تواصل واتساب مباشر</span>
+            </a>
+
+            {/* Quick Request Button */}
+            <button
+              type="button"
+              onClick={() => handleBookService()}
+              className="h-13 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-md transition-all cursor-pointer"
+            >
+              <Zap className="w-4 h-4 text-emerald-400" />
+              <span>طلب خدمة سريع</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -244,19 +291,19 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
         <button
           type="button"
           onClick={() => setActiveTab('services')}
-          className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
+          className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer ${
             activeTab === 'services'
               ? 'bg-white text-emerald-700 shadow-sm'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          الخدمات المتاحة ({services.length})
+          خدمات الفني ({services.length})
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('reviews')}
-          className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
+          className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer ${
             activeTab === 'reviews'
               ? 'bg-white text-emerald-700 shadow-sm'
               : 'text-slate-600 hover:text-slate-900'
@@ -268,7 +315,7 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
         <button
           type="button"
           onClick={() => setActiveTab('photos')}
-          className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
+          className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer ${
             activeTab === 'photos'
               ? 'bg-white text-emerald-700 shadow-sm'
               : 'text-slate-600 hover:text-slate-900'
@@ -278,30 +325,33 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
         </button>
       </div>
 
-      {/* Tab 1: Services */}
+      {/* Tab 1: Services (Limited to 3 + Other) */}
       {activeTab === 'services' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             {services.map(service => (
               <div
                 key={service.id}
                 className="bg-white rounded-3xl p-5 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] flex flex-col justify-between hover:-translate-y-1 hover:shadow-md transition-all duration-300 space-y-3"
               >
                 <div className="space-y-1">
-                  <h3 className="font-bold text-slate-900 text-base">{service.nameAr}</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">{service.description || 'صيانة وفحص وإصلاح متخصص بأحدث المعدات.'}</p>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full inline-block mb-1">
+                    خدمة معتمدة
+                  </span>
+                  <h3 className="font-bold text-slate-900 text-sm">{service.nameAr}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{service.description || 'صيانة وإصلاح احترافي مباشر بأحدث المعدات.'}</p>
                 </div>
 
                 <div className="pt-2 border-t border-slate-50 flex items-center justify-between">
                   <span className="text-xs text-slate-500 font-medium">
-                    {service.basePrice ? `يبدأ من ${service.basePrice} ج.م تقريباً` : 'تسعير مباشر حسب المعاينة'}
+                    {service.basePrice ? `من ${service.basePrice} ج.م` : 'معاينة'}
                   </span>
                   <button
                     type="button"
                     onClick={() => handleBookService(service.id)}
-                    className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold transition-all shadow-xs"
+                    className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                   >
-                    طلب هذه الخدمة
+                    طلب الخدمة
                   </button>
                 </div>
               </div>
@@ -311,7 +361,7 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
           {/* Guaranteed "Custom / Other" card */}
           <div className="bg-slate-100/70 rounded-3xl p-5 border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-center sm:text-right">
-              <h4 className="font-bold text-slate-900 text-sm">لم تجد الخدمة المحددة في القائمة؟</h4>
+              <h4 className="font-bold text-slate-900 text-sm">عطل أو خدمة أخرى غير مدرجة؟</h4>
               <p className="text-xs text-slate-600">يمكنك إرسال طلب لخدمة مخصصة وسيتواصل معك الفني لتحديد التفاصيل فوراً.</p>
             </div>
             <button
@@ -341,7 +391,7 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
           </div>
 
           {reviews.length === 0 ? (
-            <p className="text-center py-10 text-xs text-slate-500">لا توجد تقييمات مكتوبة حتى الآن. كن أول من يقيّم الفني بعد إنجاز الطلب!</p>
+            <p className="text-center py-10 text-xs text-slate-500">لا توجد تقييمات حتى الآن. كن أول من يقيّم الفني بعد إنجاز الطلب!</p>
           ) : (
             <div className="divide-y divide-slate-100">
               {reviews.map(rev => (
@@ -397,7 +447,7 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
         </div>
       )}
 
-      {/* Booking Modal */}
+      {/* Quick Request Booking Modal */}
       {isBookingModalOpen && (
         <BookingModal
           isOpen={isBookingModalOpen}

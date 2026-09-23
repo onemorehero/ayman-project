@@ -13,6 +13,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
+import { Logo } from './Logo.js';
 
 interface Props {
   activeView: string;
@@ -101,29 +102,15 @@ export function Header({
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16 sm:h-18 gap-4">
           
-          {/* Brand */}
+          {/* Brand - Official Typographic SVG Logo */}
           <div className="flex items-center gap-8">
             <button
               type="button"
               onClick={() => onNavigate('home')}
-              className="flex items-center gap-3 text-right focus:outline-none group cursor-pointer"
+              className="flex items-center focus:outline-none group cursor-pointer hover:opacity-90 active:scale-95 transition-all"
+              aria-label="خلصلى - الصفحة الرئيسية"
             >
-              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-xl shadow-md shadow-emerald-600/20 group-hover:bg-emerald-500 group-hover:scale-105 transition-all">
-                خ
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-black text-xl sm:text-2xl text-slate-900 tracking-tight leading-none group-hover:text-emerald-700 transition-colors">
-                    خلصلى
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    مجاني 100%
-                  </span>
-                </div>
-                <span className="text-[11px] text-slate-400 font-semibold block mt-1">
-                  صيانات منزلية فورية ومباشرة
-                </span>
-              </div>
+              <Logo className="text-emerald-600 h-9 sm:h-10 w-auto" />
             </button>
 
             {/* Desktop Navigation */}

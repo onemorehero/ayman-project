@@ -1,5 +1,6 @@
 import React from 'react';
 import { Zap, ShieldCheck, MapPin, Heart } from 'lucide-react';
+import { Logo } from './Logo.js';
 
 interface Props {
   onNavigate: (view: string) => void;
@@ -13,12 +14,7 @@ export function Footer({ onNavigate }: Props) {
           {/* Brand */}
           <div className="space-y-4 md:col-span-2">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black text-lg shadow-sm shadow-emerald-600/30">
-                خ
-              </div>
-              <span className="font-black text-2xl text-white tracking-tight">
-                خلصلى
-              </span>
+              <Logo className="text-emerald-400 h-10 w-auto" />
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">
                 مجاني 100%
               </span>

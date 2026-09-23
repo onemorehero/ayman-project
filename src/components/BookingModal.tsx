@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   X,
-  Calendar,
-  Clock,
   AlertTriangle,
-  CheckCircle2,
   MapPin,
   Phone,
   FileText,
-  Sparkles,
   Zap,
-  ArrowLeft
+  ArrowLeft,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { api } from '../lib/api.js';
@@ -30,21 +27,19 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
   const [services, setServices] = useState<Service[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
 
-  // Form state
+  // Form state - Quick Request (No visit date or time)
   const [selectedServiceId, setSelectedServiceId] = useState(initialServiceId || '');
   const [customServiceName, setCustomServiceName] = useState('');
   const [problemDescription, setProblemDescription] = useState('');
   const [customerPhone, setCustomerPhone] = useState(user?.phone || '');
   const [locationId, setLocationId] = useState('');
   const [addressDetails, setAddressDetails] = useState(customer?.address || '');
-  const [preferredDate, setPreferredDate] = useState('');
-  const [preferredTime, setPreferredTime] = useState('صباحاً (10 - 2)');
   const [urgency, setUrgency] = useState<'normal' | 'urgent'>('normal');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync phone & address from Auth
+  // Sync phone & address from Auth in background
   useEffect(() => {
     if (user?.phone && !customerPhone) {
       setCustomerPhone(user.phone);
@@ -57,7 +52,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
     }
   }, [customer]);
 
-  // Load services and locations for this provider
+  // Load services and locations for this provider (Enforce max 3 services for provider + Other)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -83,10 +78,12 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
         }
 
         if (provServices.length === 0) {
-          provServices = allServices || [];
+          provServices = (allServices || []).slice(0, 3);
         }
 
-        setServices(provServices);
+        // Enforce maximum 3 services for the provider's catalog
+        const limitedServices = provServices.slice(0, 3);
+        setServices(limitedServices);
 
         // Filter locations for provider
         let provLocations = (allLocations || []).filter(loc =>
@@ -101,10 +98,10 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
         setLocations(provLocations);
 
         // Set default selection
-        if (initialServiceId && provServices.some(s => s.id === initialServiceId)) {
+        if (initialServiceId && limitedServices.some(s => s.id === initialServiceId)) {
           setSelectedServiceId(initialServiceId);
-        } else if (provServices.length > 0) {
-          setSelectedServiceId(provServices[0].id);
+        } else if (limitedServices.length > 0) {
+          setSelectedServiceId(limitedServices[0].id);
         } else {
           setSelectedServiceId('other');
         }
@@ -113,11 +110,12 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
           setLocationId(provLocations[0].id);
         }
       } catch (err) {
-        console.error('Error loading booking options:', err);
+        console.error('Error loading quick request options:', err);
       }
     };
 
     loadData();
+
     return () => {
       isMounted = false;
     };
@@ -132,7 +130,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
     setError(null);
 
     if (!user || !user.id) {
-      setError('يجب تسجيل الدخول كعميل أولاً لتتمكن من إرسال طلب الحجز');
+      setError('يجب تسجيل الدخول كعميل أولاً لتتمكن من إرسال الطلب');
       return;
     }
 
@@ -147,7 +145,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
     }
 
     if (!problemDescription.trim()) {
-      setError('يرجى كتابة تفاصيل المشكلة أو الطلب');
+      setError('يرجى كتابة تفاصيل العطل أو المشكلة');
       return;
     }
 
@@ -157,7 +155,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
     }
 
     if (!addressDetails.trim()) {
-      setError('يرجى كتابة تفاصيل العنوان للزيارة');
+      setError('يرجى كتابة تفاصيل العنوان');
       return;
     }
 
@@ -182,16 +180,16 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
         problemDescription: fullDescription,
         customerPhone: customerPhone.trim(),
         addressDetails: addressDetails.trim(),
-        preferredDate: preferredDate || new Date().toISOString().split('T')[0],
-        preferredTime,
+        preferredDate: null as any,
+        preferredTime: null as any,
         urgency
       });
 
       onBookingCreated(newBooking);
       onClose();
     } catch (err: any) {
-      console.error('Booking submission error:', err);
-      setError(err.message || 'حدث خطأ أثناء حفظ طلب الحجز، يرجى المحاولة مرة أخرى');
+      console.error('Quick request submission error:', err);
+      setError(err.message || 'حدث خطأ أثناء إرسال الطلب، يرجى المحاولة مرة أخرى');
     } finally {
       setLoading(false);
     }
@@ -204,7 +202,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
         {/* Mobile Drag Indicator Handle */}
         <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0" />
 
-        {/* Header */}
+        {/* Header - Quick Request Identity */}
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
@@ -213,11 +211,16 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
               className="w-10 h-10 rounded-2xl object-cover border border-slate-200 shadow-xs"
             />
             <div>
-              <h3 className="text-base font-black text-slate-900 leading-tight">
-                طلب خدمة من {provider.businessName}
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                منصة خلصلى · حجز فوري بدون وسيط أو عمولة
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-black text-slate-900 leading-tight">
+                  طلب خدمة سريع
+                </h3>
+                <span className="text-[10px] font-black bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
+                  فوري
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                إلى الفني: <span className="font-bold text-slate-800">{provider.businessName}</span> · منصة خلصلى
               </p>
             </div>
           </div>
@@ -225,7 +228,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -238,7 +241,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
               <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
               <div className="text-xs leading-relaxed">
                 <p className="font-bold mb-0.5">تسجيل الدخول مطلوب</p>
-                <p>يجب تسجيل الدخول كعميل لتتمكن من إرسال الطلب ومتابعته عبر خلصلى.</p>
+                <p>يجب تسجيل الدخول كعميل لتتمكن من إرسال الطلب والتواصل مع الفني عبر خلصلى.</p>
               </div>
             </div>
           )}
@@ -249,15 +252,20 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
             </div>
           )}
 
-          {/* Service Selector */}
+          {/* Service Selector: Displays provider's max 3 services + fixed "أخرى" */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 block">
-              الخدمة المطلوبة: <span className="text-rose-500">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700 block">
+                الخدمة المطلوبة من الفني: <span className="text-rose-500">*</span>
+              </label>
+              <span className="text-[10px] text-slate-400 font-medium">
+                كتالوج خدمات الفني ({services.length})
+              </span>
+            </div>
             <select
               value={selectedServiceId}
               onChange={e => setSelectedServiceId(e.target.value)}
-              className="w-full h-12 px-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-semibold transition-all outline-none"
+              className="w-full h-12 px-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-semibold transition-all outline-none cursor-pointer"
             >
               {services.map(s => (
                 <option key={s.id} value={s.id}>
@@ -265,16 +273,16 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
                 </option>
               ))}
               <option value="other" className="font-bold text-slate-900">
-                ✦ أخرى (خدمة أو صيانة مخصصة)
+                ✦ أخرى (طلب خدمة أو صيانة مخصصة)
               </option>
             </select>
           </div>
 
-          {/* Custom service name */}
+          {/* Custom service name if "other" is selected */}
           {isOther && (
             <div className="space-y-1.5 animate-in fade-in duration-150">
               <label className="text-xs font-bold text-slate-700 block">
-                حدد الخدمة أو المشكلة المخصصة:
+                حدد نوع الخدمة أو العطل المطلوب:
               </label>
               <input
                 type="text"
@@ -286,7 +294,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
             </div>
           )}
 
-          {/* Problem Description */}
+          {/* Problem Details */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-700 block">
               تفاصيل العطل أو الطلب: <span className="text-rose-500">*</span>
@@ -295,7 +303,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
               value={problemDescription}
               onChange={e => setProblemDescription(e.target.value)}
               rows={3}
-              placeholder="اكتب وصفاً موجزاً للمشكلة لمساعدة الفني في إحضار القطع والمعدات المناسبة..."
+              placeholder="اكتب وصفاً موجزاً للمشكلة لمساعدة الفني في إحضار الأدوات وقطع الغيار المناسبة..."
               className="w-full p-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-medium transition-all outline-none resize-none"
             />
           </div>
@@ -314,7 +322,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
                 dir="ltr"
                 className="w-full h-12 px-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-semibold text-right transition-all outline-none"
               />
-              <span className="text-[10px] text-slate-400 block">معبأ تلقائياً من حسابك</span>
+              <span className="text-[10px] text-slate-400 block font-medium">معبأ تلقائياً من بيانات حسابك</span>
             </div>
 
             <div className="space-y-1.5">
@@ -324,7 +332,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
               <select
                 value={locationId}
                 onChange={e => setLocationId(e.target.value)}
-                className="w-full h-12 px-3 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-semibold transition-all outline-none"
+                className="w-full h-12 px-3 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-semibold transition-all outline-none cursor-pointer"
               >
                 {locations.map(loc => (
                   <option key={loc.id} value={loc.id}>
@@ -338,7 +346,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
           {/* Address Details */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-700 block">
-              العنوان التفصيلي للزيارة: <span className="text-rose-500">*</span>
+              العنوان التفصيلي: <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -347,55 +355,56 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
               placeholder="الشارع، رقم العمارة، رقم الشقة..."
               className="w-full h-12 px-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-medium transition-all outline-none"
             />
-            <span className="text-[10px] text-slate-400 block">معبأ تلقائياً من ملفك الشخصي</span>
+            <span className="text-[10px] text-slate-400 block font-medium">معبأ تلقائياً من ملفك الشخصي</span>
           </div>
 
-          {/* Date & Time Preferences */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">تاريخ الزيارة المقترح:</label>
-              <input
-                type="date"
-                value={preferredDate}
-                min={new Date().toISOString().split('T')[0]}
-                onChange={e => setPreferredDate(e.target.value)}
-                className="w-full h-12 px-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-medium transition-all outline-none"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">الوقت المفضل:</label>
-              <select
-                value={preferredTime}
-                onChange={e => setPreferredTime(e.target.value)}
-                className="w-full h-12 px-3 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-semibold transition-all outline-none"
+          {/* Urgency selection */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700 block">أولوية الطلب:</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setUrgency('normal')}
+                className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  urgency === 'normal'
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-900'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
               >
-                <option value="صباحاً (10 - 2)">صباحاً (10 ص - 2 ظ)</option>
-                <option value="عصراً (2 - 6)">عصراً (2 ظ - 6 م)</option>
-                <option value="مساءً (6 - 10)">مساءً (6 م - 10 م)</option>
-                <option value="أي وقت متاح">أي وقت متاح للفني</option>
-              </select>
+                طلب عادي
+              </button>
+              <button
+                type="button"
+                onClick={() => setUrgency('urgent')}
+                className={`py-2.5 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  urgency === 'urgent'
+                    ? 'border-amber-500 bg-amber-50 text-amber-900'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                ⚡ عاجل (في أقرب وقت)
+              </button>
             </div>
           </div>
 
-          {/* Free Guarantee Badge */}
-          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100/80 flex items-center gap-2.5 text-xs text-emerald-950">
+          {/* 100% Free Reassurance Notice */}
+          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100/80 flex items-center gap-2.5 text-xs text-emerald-950 font-medium">
             <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>منصة خلصلى مجانية بالكامل. لا عمولات ولا رسوم وساطة، ويتم الحساب مع الفني مباشرة بعد الانتهاء.</span>
+            <span>طلب فوري ومجاني 100%: يتواصل الفني معك مباشرة دون عمولات أو رسوم وساطة مستقطعة.</span>
           </div>
 
-          {/* Primary Action Button */}
+          {/* Primary Action Button: "إرسال الطلب" */}
           <div className="pt-2">
             <button
               type="submit"
               disabled={loading || !user}
-              className="w-full h-13 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:bg-slate-300 text-white font-black text-sm shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
+              className="w-full h-13 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:bg-slate-300 text-white font-black text-sm shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <span>جارٍ إرسال الطلب...</span>
               ) : (
                 <>
-                  <span>إرسال طلب الخدمة الآن</span>
+                  <span>إرسال الطلب الآن</span>
                   <ArrowLeft className="w-4 h-4" />
                 </>
               )}

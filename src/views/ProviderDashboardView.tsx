@@ -78,7 +78,7 @@ export function ProviderDashboardView() {
         setEditBusinessName(provData.businessName || '');
         setEditBio(provData.bio || '');
         setEditExperienceYears(provData.experienceYears || 3);
-        setEditServiceIds(provData.serviceIds || []);
+        setEditServiceIds((provData.serviceIds || []).slice(0, 3));
         setEditAreaIds(provData.areaIds || []);
         setEditIsActive(provData.isActive ?? true);
 
@@ -139,6 +139,11 @@ export function ProviderDashboardView() {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!providerDetails) return;
+
+    if (editServiceIds.length > 3) {
+      alert('لا يمكنك اختيار أكثر من 3 خدمات رئيسية لملفك المهني في كتالوج خلصلى.');
+      return;
+    }
 
     setSavingProfile(true);
     setProfileSuccessMsg(null);
@@ -638,28 +643,63 @@ export function ProviderDashboardView() {
             </div>
           </div>
 
-          {/* Services Checklist */}
+          {/* Services Checklist - Strictly Limited to Max 3 Services */}
           <div className="space-y-2 pt-2">
-            <label className="text-xs font-bold text-slate-700 block">الخدمات التي تقدمها:</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700 block">
+                الخدمات التي تقدمها (حد أقصى 3 خدمات فقط):
+              </label>
+              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                editServiceIds.length >= 3
+                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+              }`}>
+                {editServiceIds.length} من 3 خدمات كحد أقصى
+              </span>
+            </div>
+
+            {editServiceIds.length >= 3 ? (
+              <p className="text-[11px] text-amber-700 font-bold bg-amber-50/80 p-2.5 rounded-xl border border-amber-200">
+                ⚠️ لقد بلغت الحد الأقصى المسموح به (3 خدمات). منصة خلصلى تركز على التخصص والسرعة. لاستبدال خدمة، قم بإلغاء تحديد إحداها أولاً.
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-500">
+                اختر حتى 3 خدمات تمثل مجالك الأساسي لعرضها في الكتالوج السريع لملفك.
+              </p>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto p-3 rounded-2xl bg-slate-50 border border-slate-100">
               {allServices.map(s => {
                 const checked = editServiceIds.includes(s.id);
+                const isLimitReached = editServiceIds.length >= 3;
+                const disabled = !checked && isLimitReached;
+
                 return (
                   <label
                     key={s.id}
-                    className="flex items-center gap-2 p-2 rounded-xl hover:bg-white transition-colors cursor-pointer text-xs text-slate-800"
+                    className={`flex items-center gap-2 p-2 rounded-xl transition-all text-xs select-none ${
+                      disabled
+                        ? 'opacity-40 cursor-not-allowed bg-slate-100/60 text-slate-400'
+                        : checked
+                          ? 'bg-white border border-emerald-200 shadow-xs text-emerald-950 font-bold cursor-pointer'
+                          : 'hover:bg-white text-slate-800 cursor-pointer'
+                    }`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
+                      disabled={disabled}
                       onChange={e => {
                         if (e.target.checked) {
+                          if (editServiceIds.length >= 3) {
+                            return;
+                          }
                           setEditServiceIds(prev => [...prev, s.id]);
                         } else {
                           setEditServiceIds(prev => prev.filter(id => id !== s.id));
                         }
                       }}
-                      className="rounded text-emerald-600 focus:ring-emerald-500"
+                      className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer disabled:cursor-not-allowed"
                     />
                     <span>{s.nameAr}</span>
                   </label>
