@@ -17,7 +17,8 @@ import type {
   Commission,
   ProviderAvailability,
   AppNotification,
-  BookingStatus
+  BookingStatus,
+  Dispute
 } from '../src/types.js';
 
 export interface DatabaseSchema {
@@ -36,6 +37,8 @@ export interface DatabaseSchema {
   providerSubscriptions: ProviderSubscription[];
   commissions: Commission[];
   notifications: AppNotification[];
+  disputes: Dispute[];
+  bannedPhones: string[];
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -860,6 +863,52 @@ function getInitialSeedData(): DatabaseSchema {
     }
   ];
 
+  const disputes: Dispute[] = [
+    {
+      id: 'disp_seed_1',
+      bookingId: 'bk_seed_pending_1',
+      bookingNumber: 'EGY-10025',
+      userId: 'usr_customer1',
+      userName: 'سارة أحمد حسن',
+      userPhone: '01123456789',
+      userRole: 'customer',
+      customerUserId: 'usr_customer1',
+      customerName: 'سارة أحمد حسن',
+      customerPhone: '01123456789',
+      providerId: 'prov_1',
+      providerUserId: 'usr_provider1',
+      providerName: 'الأسطى محمود حسن',
+      providerPhone: '01019876543',
+      reasonCategory: 'تأخر عن الموعد',
+      details: 'تم تحديد موعد الزيارة الساعة الواحدة ظهراً ولم يحضر الفني ولم يتم الرد على الاتصالات الهاتفية لتوضيح سبب التأخير.',
+      photoUrl: 'https://images.unsplash.com/photo-1577563908411-5077b6dc7624?w=600&auto=format&fit=crop&q=80',
+      status: 'pending',
+      createdAt: '2026-03-08T10:30:00Z'
+    },
+    {
+      id: 'disp_seed_2',
+      bookingId: 'bk_seed_historical_1',
+      bookingNumber: 'EGY-10022',
+      userId: 'usr_provider2',
+      userName: 'المهندس أحمد الشافعي',
+      userPhone: '01155554321',
+      userRole: 'provider',
+      customerUserId: 'usr_customer2',
+      customerName: 'طارق عبد المنعم',
+      customerPhone: '01234567890',
+      providerId: 'prov_2',
+      providerUserId: 'usr_provider2',
+      providerName: 'المهندس أحمد الشافعي',
+      providerPhone: '01155554321',
+      reasonCategory: 'عنوان وهمي',
+      details: 'توجهت إلى العنوان المذكور في الطلب وتبين أنه غير صحيح والعمارة غير موجودة، ولم يرد العميل على 4 محاولات اتصال.',
+      status: 'in_review',
+      createdAt: '2026-03-07T14:15:00Z'
+    }
+  ];
+
+  const bannedPhones: string[] = ['01099999999'];
+
   return {
     users,
     customers,
@@ -875,7 +924,9 @@ function getInitialSeedData(): DatabaseSchema {
     subscriptionPlans,
     providerSubscriptions,
     commissions,
-    notifications
+    notifications,
+    disputes,
+    bannedPhones
   };
 }
 
@@ -894,6 +945,8 @@ class Database {
         const parsed = JSON.parse(raw);
         // Verify key tables exist
         if (parsed.users && parsed.providers && parsed.categories && parsed.bookings) {
+          if (!parsed.disputes) parsed.disputes = [];
+          if (!parsed.bannedPhones) parsed.bannedPhones = [];
           return parsed;
         }
       }
@@ -1593,6 +1646,142 @@ class Database {
     });
     this.save();
     return true;
+  }
+
+  // --- Disputes & Complaints ---
+  public getDisputes(): Dispute[] {
+    return this.data.disputes || [];
+  }
+
+  public getDisputeById(id: string): Dispute | undefined {
+    return (this.data.disputes || []).find(d => d.id === id);
+  }
+
+  public createDispute(data: Dispute): Dispute {
+    if (!this.data.disputes) this.data.disputes = [];
+    this.data.disputes.unshift(data);
+    this.save();
+
+    // Notify all admin users
+    const admins = this.data.users.filter(u => u.role === 'admin');
+    admins.forEach(adm => {
+      this.createNotification({
+        userId: adm.id,
+        title: 'بلاغ نزاع جديد في منصة خلصلى ⚠️',
+        message: `تم تقديم بلاغ نزاع جديد على الطلب #${data.bookingNumber || data.bookingId}: ${data.reasonCategory}`,
+        type: 'system',
+        link: '/admin'
+      });
+    });
+
+    return data;
+  }
+
+  public updateDisputeStatus(id: string, status: 'pending' | 'in_review' | 'resolved' | 'dismissed', adminNotes?: string): Dispute | null {
+    if (!this.data.disputes) this.data.disputes = [];
+    const index = this.data.disputes.findIndex(d => d.id === id);
+    if (index === -1) return null;
+
+    this.data.disputes[index].status = status;
+    if (adminNotes !== undefined) this.data.disputes[index].adminNotes = adminNotes;
+    if (status === 'resolved') this.data.disputes[index].resolvedAt = new Date().toISOString();
+
+    this.save();
+    return this.data.disputes[index];
+  }
+
+  // --- Penalties & User Status Management ---
+  public isPhoneBanned(phone: string): boolean {
+    if (!this.data.bannedPhones) this.data.bannedPhones = [];
+    const clean = phone.trim().replace(/\s+/g, '');
+    return this.data.bannedPhones.some(p => clean.includes(p) || p.includes(clean));
+  }
+
+  public banPhone(phone: string) {
+    if (!this.data.bannedPhones) this.data.bannedPhones = [];
+    const clean = phone.trim().replace(/\s+/g, '');
+    if (!this.data.bannedPhones.includes(clean)) {
+      this.data.bannedPhones.push(clean);
+      this.save();
+    }
+  }
+
+  public updateUser(id: string, updates: Partial<User>): User | null {
+    const user = this.data.users.find(u => u.id === id);
+    if (!user) return null;
+    Object.assign(user, updates);
+    this.save();
+    return user;
+  }
+
+  public applyUserPenalty(userId: string, action: 'warn' | 'suspend' | 'ban' | 'activate', reason?: string): { success: boolean; user: User; message: string } | null {
+    const user = this.getUserById(userId);
+    if (!user) return null;
+
+    if (action === 'warn') {
+      user.warningCount = (user.warningCount || 0) + 1;
+      user.lastWarningReason = reason || 'مخالفة ميثاق التعامل وشروط الاستخدام';
+      this.createNotification({
+        userId,
+        title: '⚠️ إنذار رسمي من إدارة منصة خلصلى',
+        message: reason
+          ? `تم توجيه إنذار رسمي لحسابك: ${reason}. يرجى الالتزام بميثاق المجتمع تفادياً لإيقاف الحساب.`
+          : 'تم توجيه إنذار رسمي لحسابك لمخالفة ميثاق المجتمع. تكرار المخالفة يعرض حسابك للإيقاف المؤقت أو الحظر النهائي.',
+        type: 'system',
+        link: '/terms'
+      });
+      this.save();
+      return { success: true, user, message: 'تم إرسال الإنذار الرسمي للحساب بنجاح' };
+    }
+
+    if (action === 'suspend') {
+      user.status = 'suspended';
+      const provider = this.getProviderByUserId(userId);
+      if (provider) {
+        provider.isActive = false;
+      }
+      this.createNotification({
+        userId,
+        title: '🚫 تم إيقاف حسابك مؤقتاً',
+        message: 'تم إيقاف حسابك مؤقتاً لمخالفة سياسات منصة خلصلى أو لوجود شكوى قيد التحقيق.',
+        type: 'system',
+        link: '/terms'
+      });
+      this.save();
+      return { success: true, user, message: 'تم إيقاف الحساب مؤقتاً ومنعه من الدخول' };
+    }
+
+    if (action === 'ban') {
+      user.status = 'banned';
+      if (user.phone) {
+        this.banPhone(user.phone);
+      }
+      const provider = this.getProviderByUserId(userId);
+      if (provider) {
+        provider.isActive = false;
+      }
+      this.createNotification({
+        userId,
+        title: '⛔ تم حظر هذا الحساب نهائياً',
+        message: 'تم حظر هذا الحساب ورقم الهاتف نهائياً لمخالفة ميثاق مجتمع خلصلى.',
+        type: 'system',
+        link: '/terms'
+      });
+      this.save();
+      return { success: true, user, message: 'تم حظر الحساب نهائياً وحظر رقم الهاتف من إعادة التسجيل' };
+    }
+
+    if (action === 'activate') {
+      user.status = 'active';
+      const provider = this.getProviderByUserId(userId);
+      if (provider) {
+        provider.isActive = true;
+      }
+      this.save();
+      return { success: true, user, message: 'تمت استعادة تنشيط الحساب بنجاح' };
+    }
+
+    return null;
   }
 
   // --- Platform Statistics for Admin ---

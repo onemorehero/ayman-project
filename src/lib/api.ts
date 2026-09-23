@@ -78,9 +78,12 @@ function mapUser(row: any): User {
     email: row.email,
     phone: row.phone,
     role: row.role,
-    avatarUrl: row.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80',
+    avatarUrl: row.avatar_url || row.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80',
     password: row.password,
-    createdAt: row.created_at || new Date().toISOString()
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    status: row.status || 'active',
+    warningCount: Number(row.warning_count ?? row.warningCount ?? 0),
+    lastWarningReason: row.last_warning_reason || row.lastWarningReason
   };
 }
 
@@ -151,7 +154,7 @@ export function generateProviderSlug(businessName: string, id: string): string {
 function mapProvider(row: any, userDetails?: User): Provider {
   if (!row) return {} as Provider;
   const businessName = row.business_name || row.businessName || '';
-  const slug = generateProviderSlug(businessName, row.id);
+  const slug = row.slug || generateProviderSlug(businessName, row.id);
   return {
     id: row.id,
     userId: row.user_id || row.userId || '',
@@ -275,10 +278,18 @@ export const api = {
   // ------------------------------------------------------------------
   login: async (email: string, password?: string) => {
     if (!supabase) {
-      return fallbackRequest<{ user: User; customer: Customer | null; provider: Provider | null }>('/api/auth/login', {
+      const res = await fallbackRequest<{ user: User; customer: Customer | null; provider: Provider | null }>('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password })
       });
+      const pen = api.getUserPenaltyInfo(res.user.id);
+      if (pen.status === 'suspended' || res.user.status === 'suspended') {
+        throw new Error('تم إيقاف حسابك مؤقتاً بسبب مخالفة سياسات المنصة أو وجود شكوى قيد التحقيق. يرجى مراجعة إدارة خلصلى.');
+      }
+      if (pen.status === 'banned' || res.user.status === 'banned') {
+        throw new Error('تم حظر هذا الحساب نهائياً لمخالفة ميثاق مجتمع خلصلى.');
+      }
+      return res;
     }
 
     const { data: userRow, error } = await supabase
@@ -294,6 +305,14 @@ export const api = {
     }
 
     const user = mapUser(userRow);
+    const pen = api.getUserPenaltyInfo(user.id);
+    if (pen.status === 'suspended' || user.status === 'suspended') {
+      throw new Error('تم إيقاف حسابك مؤقتاً بسبب مخالفة سياسات المنصة أو وجود شكوى قيد التحقيق. يرجى مراجعة إدارة خلصلى.');
+    }
+    if (pen.status === 'banned' || user.status === 'banned') {
+      throw new Error('تم حظر هذا الحساب نهائياً لمخالفة ميثاق مجتمع خلصلى.');
+    }
+
     setApiUser(user.id);
 
     let customer: Customer | null = null;
@@ -319,6 +338,10 @@ export const api = {
   },
 
   register: async (payload: any): Promise<{ user: User; customer: Customer | null; provider: Provider | null }> => {
+    if (payload.phone && api.isPhoneBanned(payload.phone)) {
+      throw new Error('رقم الهاتف هذا محظور نهائياً من التسجيل في منصة خلصلى لمخالفة ميثاق المجتمع.');
+    }
+
     if (payload.role === 'provider') {
       const res = await api.registerProvider({
         name: payload.name,
@@ -764,15 +787,19 @@ export const api = {
     return api.getProvider(slugOrId);
   },
 
-  getAlternativeProviders: async (categoryId?: string, excludeProviderId?: string): Promise<Provider[]> => {
+  getAlternativeProviders: async (categoryId?: string, excludeProviderId?: string, serviceId?: string): Promise<Provider[]> => {
     const all = await api.getProviders();
     return all
       .filter(p => {
         if (excludeProviderId && p.id === excludeProviderId) return false;
-        if (categoryId && p.categoryIds && p.categoryIds.length > 0) {
+        if (p.isActive === false) return false;
+        if (serviceId && Array.isArray(p.serviceIds) && p.serviceIds.includes(serviceId)) {
+          return true;
+        }
+        if (categoryId && Array.isArray(p.categoryIds) && p.categoryIds.length > 0) {
           return p.categoryIds.includes(categoryId);
         }
-        return true;
+        return !categoryId && !serviceId;
       })
       .slice(0, 4);
   },
@@ -798,6 +825,7 @@ export const api = {
     if (data.areaIds !== undefined) updatePayload.area_ids = data.areaIds;
     if (data.workingHours !== undefined) updatePayload.working_hours = data.workingHours;
     if (data.isActive !== undefined) updatePayload.is_active = data.isActive;
+    if (data.slug !== undefined) updatePayload.slug = data.slug;
     if ((data as any).avatarUrl !== undefined) updatePayload.avatar_url = (data as any).avatarUrl;
 
     const { data: updated, error } = await supabase
@@ -1459,8 +1487,13 @@ export const api = {
     userName?: string;
     userPhone?: string;
     userRole: 'customer' | 'provider';
+    customerUserId?: string;
+    customerName?: string;
+    customerPhone?: string;
     providerId: string;
+    providerUserId?: string;
     providerName?: string;
+    providerPhone?: string;
     reasonCategory: string;
     details: string;
     photoUrl?: string;
@@ -1474,8 +1507,13 @@ export const api = {
       userName: data.userName || 'مستخدم المنصة',
       userPhone: data.userPhone || '',
       userRole: data.userRole,
+      customerUserId: data.customerUserId,
+      customerName: data.customerName,
+      customerPhone: data.customerPhone,
       providerId: data.providerId,
+      providerUserId: data.providerUserId,
       providerName: data.providerName || 'مقدم الخدمة',
+      providerPhone: data.providerPhone,
       reasonCategory: data.reasonCategory,
       details: data.details,
       photoUrl: data.photoUrl,
@@ -1483,13 +1521,25 @@ export const api = {
       createdAt: new Date().toISOString()
     };
 
+    // Store in localStorage for instant offline/hybrid support
     try {
-      const stored = localStorage.getItem('zahraa_disputes');
+      const stored = localStorage.getItem('khalasly_disputes');
       const list: Dispute[] = stored ? JSON.parse(stored) : [];
       list.unshift(dispute);
+      localStorage.setItem('khalasly_disputes', JSON.stringify(list));
       localStorage.setItem('zahraa_disputes', JSON.stringify(list));
     } catch (e) {
       console.warn('LocalStorage error:', e);
+    }
+
+    // Try posting to backend server
+    try {
+      await fallbackRequest<Dispute>('/api/disputes', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+    } catch (e) {
+      // Backend may be offline or handled by mock, fallback is fine
     }
 
     try {
@@ -1499,10 +1549,10 @@ export const api = {
           await supabase.from('notifications').insert({
             id: 'notif_' + Math.random().toString(36).substring(2, 9),
             user_id: adminUser.id,
-            title: 'بلاغ نزاع جديد في منصة زهراء',
+            title: 'بلاغ نزاع جديد في منصة خلصلى',
             message: `تم تقديم بلاغ نزاع على الطلب ${data.bookingNumber || data.bookingId}: ${data.reasonCategory}`,
             type: 'system',
-            link: '/admin-dashboard',
+            link: '/admin',
             is_read: false,
             created_at: new Date().toISOString()
           });
@@ -1516,61 +1566,92 @@ export const api = {
   },
 
   getDisputes: async (): Promise<Dispute[]> => {
+    // First try backend
     try {
-      const stored = localStorage.getItem('zahraa_disputes');
+      const res = await fallbackRequest<Dispute[]>('/api/disputes');
+      if (Array.isArray(res) && res.length > 0) {
+        localStorage.setItem('khalasly_disputes', JSON.stringify(res));
+        return res;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    try {
+      const stored = localStorage.getItem('khalasly_disputes') || localStorage.getItem('zahraa_disputes');
       if (stored) {
         return JSON.parse(stored);
       }
     } catch (e) {
       console.warn('LocalStorage error:', e);
     }
+
     const defaultDisputes: Dispute[] = [
       {
-        id: 'disp_init_1',
-        bookingId: 'bk_demo_1',
-        bookingNumber: 'EG-402910',
+        id: 'disp_seed_1',
+        bookingId: 'bk_seed_pending_1',
+        bookingNumber: 'EGY-10025',
         userId: 'usr_customer1',
-        userName: 'أحمد محمود العميل',
-        userPhone: '01012345678',
+        userName: 'سارة أحمد حسن',
+        userPhone: '01123456789',
         userRole: 'customer',
+        customerUserId: 'usr_customer1',
+        customerName: 'سارة أحمد حسن',
+        customerPhone: '01123456789',
         providerId: 'prov_1',
-        providerName: 'م/ إبراهيم حسن (صيانة وتركيبات التكييف)',
-        reasonCategory: 'عدم الالتزام بالموعد المحدد',
-        details: 'تم الاتفاق على الحضور الساعة 2 ظهراً ولم يحضر الفني ولم يرد على الهاتف بعد قبول الطلب ثم تم إلغاء الزيارة.',
+        providerUserId: 'usr_provider1',
+        providerName: 'الأسطى محمود حسن',
+        providerPhone: '01019876543',
+        reasonCategory: 'تأخر عن الموعد',
+        details: 'تم تحديد موعد الزيارة الساعة الواحدة ظهراً ولم يحضر الفني ولم يتم الرد على الاتصالات الهاتفية لتوضيح سبب التأخير.',
+        photoUrl: 'https://images.unsplash.com/photo-1577563908411-5077b6dc7624?w=600&auto=format&fit=crop&q=80',
         status: 'pending',
         createdAt: new Date(Date.now() - 3600000 * 5).toISOString()
       },
       {
-        id: 'disp_init_2',
-        bookingId: 'bk_demo_2',
-        bookingNumber: 'EG-784119',
-        userId: 'usr_customer2',
-        userName: 'سارة خالد',
-        userPhone: '01198765432',
-        userRole: 'customer',
+        id: 'disp_seed_2',
+        bookingId: 'bk_seed_historical_1',
+        bookingNumber: 'EGY-10022',
+        userId: 'usr_provider2',
+        userName: 'المهندس أحمد الشافعي',
+        userPhone: '01155554321',
+        userRole: 'provider',
+        customerUserId: 'usr_customer2',
+        customerName: 'طارق عبد المنعم',
+        customerPhone: '01234567890',
         providerId: 'prov_2',
-        providerName: 'أ/ محمد طارق (سباكة متكاملة)',
-        reasonCategory: 'طلب مبالغ إضافية غير متفق عليها',
-        details: 'طلب الفني مبلغاً إضافياً كبيراً بحجة مصاريف انتقال لم تكن مذكورة مسبقاً، وبعد الاعتراض ألغى الموعد.',
+        providerUserId: 'usr_provider2',
+        providerName: 'المهندس أحمد الشافعي',
+        providerPhone: '01155554321',
+        reasonCategory: 'عنوان وهمي',
+        details: 'توجهت إلى العنوان المذكور في الطلب وتبين أنه غير صحيح والعمارة غير موجودة، ولم يرد العميل على 4 محاولات اتصال.',
         status: 'in_review',
         createdAt: new Date(Date.now() - 3600000 * 24).toISOString()
       }
     ];
     try {
-      localStorage.setItem('zahraa_disputes', JSON.stringify(defaultDisputes));
+      localStorage.setItem('khalasly_disputes', JSON.stringify(defaultDisputes));
     } catch (e) {}
     return defaultDisputes;
   },
 
   updateDisputeStatus: async (id: string, status: 'pending' | 'in_review' | 'resolved' | 'dismissed', adminNotes?: string): Promise<Dispute | null> => {
     try {
-      const stored = localStorage.getItem('zahraa_disputes');
+      await fallbackRequest<Dispute>(`/api/disputes/${encodeURIComponent(id)}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status, adminNotes })
+      });
+    } catch (e) {}
+
+    try {
+      const stored = localStorage.getItem('khalasly_disputes') || localStorage.getItem('zahraa_disputes');
       let list: Dispute[] = stored ? JSON.parse(stored) : [];
       const index = list.findIndex(d => d.id === id);
       if (index !== -1) {
         list[index].status = status;
         if (adminNotes !== undefined) list[index].adminNotes = adminNotes;
         if (status === 'resolved') list[index].resolvedAt = new Date().toISOString();
+        localStorage.setItem('khalasly_disputes', JSON.stringify(list));
         localStorage.setItem('zahraa_disputes', JSON.stringify(list));
         return list[index];
       }
@@ -1578,6 +1659,123 @@ export const api = {
       console.warn('Dispute update error:', e);
     }
     return null;
+  },
+
+  // Apply strict penalties: 'warn' | 'suspend' | 'ban' | 'activate'
+  applyUserPenalty: async (
+    userId: string,
+    action: 'warn' | 'suspend' | 'ban' | 'activate',
+    reason?: string,
+    phone?: string
+  ): Promise<{ success: boolean; user: any; message: string }> => {
+    // 1. Try sending to backend
+    try {
+      const serverRes = await fallbackRequest<any>(`/api/admin/users/${encodeURIComponent(userId)}/penalty`, {
+        method: 'POST',
+        body: JSON.stringify({ action, reason })
+      });
+      if (serverRes) {
+        // Also sync local cache
+        const storedPenaltiesRaw = localStorage.getItem('khalasly_penalties') || '{}';
+        const storedPenalties = JSON.parse(storedPenaltiesRaw);
+        storedPenalties[userId] = {
+          status: serverRes.user.status,
+          warningCount: serverRes.user.warningCount,
+          lastWarningReason: serverRes.user.lastWarningReason
+        };
+        localStorage.setItem('khalasly_penalties', JSON.stringify(storedPenalties));
+        return serverRes;
+      }
+    } catch (e) {
+      // Backend request fallback to localStorage
+    }
+
+    // 2. Local fallback
+    const storedPenaltiesRaw = localStorage.getItem('khalasly_penalties') || '{}';
+    const storedPenalties = JSON.parse(storedPenaltiesRaw);
+    const userPen = storedPenalties[userId] || { status: 'active', warningCount: 0, lastWarningReason: '' };
+
+    if (action === 'warn') {
+      userPen.warningCount = (userPen.warningCount || 0) + 1;
+      userPen.lastWarningReason = reason || 'مخالفة ميثاق التعامل وشروط الاستخدام';
+    } else if (action === 'suspend') {
+      userPen.status = 'suspended';
+    } else if (action === 'ban') {
+      userPen.status = 'banned';
+      if (phone) {
+        const bannedPhones: string[] = JSON.parse(localStorage.getItem('khalasly_banned_phones') || '[]');
+        if (!bannedPhones.includes(phone)) {
+          bannedPhones.push(phone);
+          localStorage.setItem('khalasly_banned_phones', JSON.stringify(bannedPhones));
+        }
+      }
+    } else if (action === 'activate') {
+      userPen.status = 'active';
+    }
+
+    storedPenalties[userId] = userPen;
+    localStorage.setItem('khalasly_penalties', JSON.stringify(storedPenalties));
+
+    // Create notification for the user
+    try {
+      const notifMsg = action === 'warn'
+        ? `⚠️ إنذار رسمي: ${reason || 'تم تسجيل مخالفة لميثاق المجتمع. تكرار المخالفة يعرض حسابك للإيقاف.'}`
+        : action === 'suspend'
+        ? '🚫 تم إيقاف حسابك مؤقتاً لمخالفة سياسات المنصة أو لوجود شكوى قيد التحقيق.'
+        : action === 'ban'
+        ? '⛔ تم حظر هذا الحساب نهائياً لمخالفة ميثاق مجتمع خلصلى.'
+        : 'تمت استعادة تنشيط الحساب بنجاح.';
+
+      const notifs: AppNotification[] = JSON.parse(localStorage.getItem('khalasly_local_notifs_' + userId) || '[]');
+      notifs.unshift({
+        id: 'notif_' + Math.random().toString(36).substring(2, 9),
+        userId,
+        title: action === 'warn' ? '⚠️ إنذار رسمي من إدارة خلصلى' : action === 'suspend' ? '🚫 إيقاف مؤقت للحساب' : '⛔ حظر نهائي للحساب',
+        message: notifMsg,
+        type: 'system',
+        link: '/terms',
+        isRead: false,
+        createdAt: new Date().toISOString()
+      });
+      localStorage.setItem('khalasly_local_notifs_' + userId, JSON.stringify(notifs));
+    } catch (e) {}
+
+    const msg = action === 'warn'
+      ? 'تم إرسال الإنذار الرسمي للحساب بنجاح'
+      : action === 'suspend'
+      ? 'تم إيقاف الحساب مؤقتاً ومنعه من الدخول'
+      : action === 'ban'
+      ? 'تم حظر الحساب نهائياً وحظر رقم الهاتف من إعادة التسجيل'
+      : 'تمت استعادة تنشيط الحساب';
+
+    return {
+      success: true,
+      user: { id: userId, ...userPen },
+      message: msg
+    };
+  },
+
+  getUserPenaltyInfo: (userId: string) => {
+    try {
+      const stored = localStorage.getItem('khalasly_penalties');
+      if (stored) {
+        const penalties = JSON.parse(stored);
+        if (penalties[userId]) return penalties[userId];
+      }
+    } catch {}
+    return { status: 'active', warningCount: 0 };
+  },
+
+  isPhoneBanned: (phone: string): boolean => {
+    try {
+      const stored = localStorage.getItem('khalasly_banned_phones');
+      if (stored) {
+        const banned: string[] = JSON.parse(stored);
+        const clean = phone.trim().replace(/\s+/g, '');
+        return banned.some(p => clean.includes(p) || p.includes(clean));
+      }
+    } catch {}
+    return false;
   },
 
   resetDemoData: async () => {

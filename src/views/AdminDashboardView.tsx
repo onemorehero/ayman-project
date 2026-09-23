@@ -18,7 +18,13 @@ import {
   ShieldAlert,
   Zap,
   ExternalLink,
-  MessageSquare
+  MessageSquare,
+  AlertTriangle,
+  PauseCircle,
+  Ban,
+  Phone,
+  UserCheck,
+  BellRing
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.js';
@@ -36,7 +42,11 @@ export function AdminDashboardView() {
   const [customers, setCustomers] = useState<(Customer & { user?: User })[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [penaltyToast, setPenaltyToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [selectedPhotoPreview, setSelectedPhotoPreview] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'disputes' | 'providers' | 'customers' | 'bookings' | 'reviews' | 'categories' | 'services' | 'locations'>('overview');
 
@@ -58,7 +68,7 @@ export function AdminDashboardView() {
   const fetchAllAdminData = async () => {
     setLoading(true);
     try {
-      const [st, cats, srvs, locs, provs, bks, custs, revs, disps] = await Promise.all([
+      const [st, cats, srvs, locs, provs, bks, custs, revs, disps, usrs] = await Promise.all([
         api.getAdminStats(),
         api.getCategories(),
         api.getServices(),
@@ -67,7 +77,8 @@ export function AdminDashboardView() {
         api.getBookings({}),
         api.getCustomers().catch(() => []),
         api.getReviews().catch(() => []),
-        api.getDisputes().catch(() => [])
+        api.getDisputes().catch(() => []),
+        api.getAllUsers().catch(() => [])
       ]);
       setStats(st);
       setCategories(cats);
@@ -78,6 +89,7 @@ export function AdminDashboardView() {
       setCustomers(custs);
       setReviews(revs);
       setDisputes(disps);
+      setAllUsers(usrs);
       if (cats.length > 0 && !newServiceCatId) {
         setNewServiceCatId(cats[0].id);
       }
@@ -91,6 +103,61 @@ export function AdminDashboardView() {
   useEffect(() => {
     fetchAllAdminData();
   }, []);
+
+  // Strict penalty application: 'warn' | 'suspend' | 'ban' | 'activate'
+  const handleApplyPenalty = async (
+    targetUserId: string,
+    targetName: string,
+    targetPhone: string,
+    targetRole: 'customer' | 'provider',
+    action: 'warn' | 'suspend' | 'ban' | 'activate'
+  ) => {
+    let reason = '';
+    const roleLabel = targetRole === 'customer' ? 'العميل' : 'الفني';
+
+    if (action === 'warn') {
+      const input = window.prompt(
+        `توجيه إنذار رسمي لـ ${roleLabel} (${targetName}):\nيرجى كتابة سبب الإنذار ليظهر في إشعار الحساب:`,
+        'مخالفة ميثاق التعامل وشروط الاستخدام في منصة خلصلى'
+      );
+      if (input === null) return;
+      reason = input.trim() || 'مخالفة ميثاق التعامل في منصة خلصلى';
+    } else if (action === 'suspend') {
+      if (!window.confirm(`هل أنت متأكد من تطبيق "إيقاف مؤقت" لحساب ${roleLabel} (${targetName})؟\nسيتم منعه فوراً من الدخول للنظام.`)) {
+        return;
+      }
+      reason = 'إيقاف مؤقت للحساب بواسطة الإدارة بناءً على نزاع أو شكوى قيد التحقيق';
+    } else if (action === 'ban') {
+      if (!window.confirm(`تحذير نهائي:\nهل أنت متأكد من تطبيق "حظر نهائي" لحساب ${roleLabel} (${targetName})؟\nسيتم منع الحساب نهائياً وحظر رقم الهاتف (${targetPhone || 'المسجل'}) من التسجيل مستقبلاً.`)) {
+        return;
+      }
+      reason = `حظر نهائي لمخالفة ميثاق مجتمع خلصلى - هاتف: ${targetPhone || ''}`;
+    } else if (action === 'activate') {
+      if (!window.confirm(`هل تريد استعادة وتنشيط حساب ${roleLabel} (${targetName}) وإلغاء الإيقاف؟`)) {
+        return;
+      }
+      reason = 'إعادة تنشيط الحساب بواسطة الإدارة';
+    }
+
+    try {
+      setActionLoading(true);
+      const res = await api.applyUserPenalty(targetUserId, action, reason, targetPhone);
+      setPenaltyToast({
+        message: res.message || 'تم تطبيق الإجراء بنجاح',
+        type: 'success'
+      });
+      await fetchAllAdminData();
+      setTimeout(() => setPenaltyToast(null), 4000);
+    } catch (err: any) {
+      setPenaltyToast({
+        message: err.message || 'فشل تطبيق الإجراء على الحساب',
+        type: 'error'
+      });
+      setTimeout(() => setPenaltyToast(null), 4000);
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // Provider verification toggle
   const handleToggleVerification = async (providerId: string, current: boolean) => {
@@ -284,7 +351,7 @@ export function AdminDashboardView() {
           }`}
         >
           <ShieldAlert className="w-4 h-4 text-rose-600" />
-          <span>البلاغات والمنازعات</span>
+          <span>النزاعات والشكاوى</span>
           <span className="bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full text-[11px] font-black">
             {disputes.length}
           </span>
@@ -423,104 +490,386 @@ export function AdminDashboardView() {
         </div>
       )}
 
-      {/* Tab: Disputes */}
+      {/* Tab: Disputes & Complaints */}
       {activeTab === 'disputes' && (
         <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-4">
-          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="font-black text-slate-900 text-sm">إدارة البلاغات والمنازعات ({disputes.length})</h2>
-              <p className="text-xs text-slate-400">متابعة شكاوى المستخدمين والفنيين والتدخل السريع لحل الخلافات وضمان العدالة</p>
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-rose-600" />
+                <h2 className="font-black text-slate-900 text-base">النزاعات والشكاوى والعقوبات الصارمة ({disputes.length})</h2>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                متابعة بلاغات النزاعات بين العملاء والفنيين، وفحص إثباتات المحادثات، وتطبيق إجراءات الإنذار أو الإيقاف المؤقت أو الحظر النهائي.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] bg-slate-100 text-slate-600 font-bold px-3 py-1.5 rounded-xl">
+                إجمالي المسجلين: {allUsers.length}
+              </span>
             </div>
           </div>
 
+          {/* Action toast feedback */}
+          {penaltyToast && (
+            <div className="mx-6 p-4 rounded-2xl text-xs font-bold flex items-center justify-between shadow-xs transition-all animate-in fade-in"
+              style={{
+                backgroundColor: penaltyToast.type === 'success' ? '#059669' : '#e11d48',
+                color: '#ffffff'
+              }}
+            >
+              <span>{penaltyToast.message}</span>
+              <button
+                type="button"
+                onClick={() => setPenaltyToast(null)}
+                className="underline text-[11px] cursor-pointer"
+              >
+                إغلاق
+              </button>
+            </div>
+          )}
+
           {disputes.length === 0 ? (
-            <div className="p-12 text-center text-xs text-slate-500">لا توجد بلاغات أو منازعات مسجلة حالياً.</div>
+            <div className="p-16 text-center space-y-2">
+              <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-sm font-black text-slate-900">سجل النزاعات نظيف تماماً</h3>
+              <p className="text-xs text-slate-400">لا توجد أي بلاغات أو شكاوى قيد المراجعة حالياً.</p>
+            </div>
           ) : (
-            <div className="p-5 space-y-4">
-              {disputes.map(disp => (
-                <div key={disp.id} className="p-5 rounded-3xl border border-slate-100 bg-slate-50/50 space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-3">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 text-sm">{disp.reasonCategory}</span>
-                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                          disp.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                          disp.status === 'in_review' ? 'bg-sky-100 text-sky-800' :
-                          disp.status === 'resolved' ? 'bg-emerald-100 text-emerald-800' :
-                          'bg-slate-200 text-slate-700'
-                        }`}>
-                          {disp.status === 'pending' ? 'بانتظار المراجعة' :
-                           disp.status === 'in_review' ? 'قيد المتابعة والتحقيق' :
-                           disp.status === 'resolved' ? 'تم الحل والتسوية' : 'تم الرفض / الإغلاق'}
-                        </span>
+            <div className="p-5 sm:p-6 space-y-6">
+              {disputes.map(disp => {
+                const booking = bookings.find(b => b.id === disp.bookingId || b.bookingNumber === disp.bookingNumber);
+
+                // Customer Data
+                const customerUserId = disp.customerUserId || booking?.customerUserId || (disp.userRole === 'customer' ? disp.userId : 'usr_customer1');
+                const customerUser = allUsers.find(u => u.id === customerUserId) || customers.find(c => c.userId === customerUserId || c.id === booking?.customerId)?.user;
+                const customerName = disp.customerName || booking?.customer?.name || (disp.userRole === 'customer' ? disp.userName : 'العميل');
+                const customerPhone = disp.customerPhone || booking?.customerPhone || customerUser?.phone || (disp.userRole === 'customer' ? disp.userPhone : '') || '01123456789';
+                const customerStatus = customerUser?.status || (api.getUserPenaltyInfo(customerUserId)?.status) || 'active';
+                const customerWarnings = customerUser?.warningCount ?? (api.getUserPenaltyInfo(customerUserId)?.warningCount) ?? 0;
+
+                // Provider Data
+                const providerObj = providers.find(p => p.id === disp.providerId || p.id === booking?.providerId);
+                const providerUserId = disp.providerUserId || providerObj?.userId || booking?.providerUserId || (disp.userRole === 'provider' ? disp.userId : 'usr_provider1');
+                const providerUser = allUsers.find(u => u.id === providerUserId) || providerObj?.user;
+                const providerName = disp.providerName || providerObj?.businessName || booking?.provider?.businessName || (disp.userRole === 'provider' ? disp.userName : 'مقدم الخدمة');
+                const providerPhone = disp.providerPhone || providerUser?.phone || providerObj?.user?.phone || (disp.userRole === 'provider' ? disp.userPhone : '') || '01019876543';
+                const providerStatus = providerUser?.status || (api.getUserPenaltyInfo(providerUserId)?.status) || 'active';
+                const providerWarnings = providerUser?.warningCount ?? (api.getUserPenaltyInfo(providerUserId)?.warningCount) ?? 0;
+
+                return (
+                  <div
+                    key={disp.id}
+                    className="p-5 sm:p-6 rounded-3xl border border-slate-200/90 bg-slate-50/40 space-y-5 shadow-[0_2px_15px_rgb(0,0,0,0.02)]"
+                  >
+                    {/* Top Row: Dispute Meta & Status Controls */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-200/70 pb-4">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-black text-slate-900 text-sm sm:text-base">
+                            سبب الشكوى: {disp.reasonCategory}
+                          </span>
+                          <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                            disp.userRole === 'customer'
+                              ? 'bg-sky-100 text-sky-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            المُبلّغ: {disp.userRole === 'customer' ? 'العميل' : 'الفني'}
+                          </span>
+                          <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full ${
+                            disp.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                            disp.status === 'in_review' ? 'bg-sky-100 text-sky-800' :
+                            disp.status === 'resolved' ? 'bg-emerald-100 text-emerald-800' :
+                            'bg-slate-200 text-slate-700'
+                          }`}>
+                            {disp.status === 'pending' ? 'بانتظار المراجعة' :
+                             disp.status === 'in_review' ? 'قيد التحقيق والمتابعة' :
+                             disp.status === 'resolved' ? 'تم الحل والتسوية' : 'مغلق'}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-slate-500">
+                          طلب رقم #{disp.bookingNumber || disp.bookingId} · تاريخ تقديم البلاغ: {new Date(disp.createdAt).toLocaleString('ar-EG')}
+                        </p>
                       </div>
-                      <p className="text-xs text-slate-500">
-                        طلب رقم #{disp.bookingNumber} · تاريخ البلاغ: {new Date(disp.createdAt).toLocaleString('ar-EG')}
-                      </p>
+
+                      {/* Dispute Resolution Status Buttons */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {disp.status !== 'in_review' && disp.status !== 'resolved' && (
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateDispute(disp.id, 'in_review')}
+                            className="h-8 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                          >
+                            بدء التحقيق
+                          </button>
+                        )}
+                        {disp.status !== 'resolved' && (
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateDispute(disp.id, 'resolved')}
+                            className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                          >
+                            تم الحل والتسوية
+                          </button>
+                        )}
+                        {disp.status !== 'dismissed' && (
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateDispute(disp.id, 'dismissed')}
+                            className="h-8 px-3 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 text-[11px] font-semibold transition-all cursor-pointer active:scale-95"
+                          >
+                            إغلاق البلاغ
+                          </button>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Quick status change buttons */}
-                    <div className="flex items-center gap-1.5">
-                      {disp.status !== 'in_review' && disp.status !== 'resolved' && (
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateDispute(disp.id, 'in_review')}
-                          className="h-8 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-bold transition-all"
-                        >
-                          بدء المراجعة
-                        </button>
-                      )}
-                      {disp.status !== 'resolved' && (
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateDispute(disp.id, 'resolved')}
-                          className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold transition-all shadow-sm"
-                        >
-                          تحديد كمحلول
-                        </button>
-                      )}
-                      {disp.status !== 'dismissed' && (
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateDispute(disp.id, 'dismissed')}
-                          className="h-8 px-3 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 text-[11px] font-medium transition-all"
-                        >
-                          إغلاق
-                        </button>
-                      )}
+                    {/* Complaint Details Description */}
+                    <div className="bg-white p-4 rounded-2xl border border-slate-200/70 text-xs text-slate-800 leading-relaxed shadow-2xs">
+                      <span className="font-bold text-slate-900 block mb-1 text-xs">تفاصيل الشكوى والوقائع:</span>
+                      <p className="whitespace-pre-wrap font-medium">{disp.details}</p>
+                    </div>
+
+                    {/* Attached Screenshot / Proof (Optional) */}
+                    {disp.photoUrl && (
+                      <div className="bg-white p-4 rounded-2xl border border-slate-200/70 shadow-2xs space-y-2">
+                        <span className="text-xs font-bold text-slate-800 block">
+                          إثبات المحادثة أو العطل (سكرين شوت مرفق):
+                        </span>
+                        <div className="relative inline-block group cursor-pointer" onClick={() => setSelectedPhotoPreview(disp.photoUrl || null)}>
+                          <img
+                            src={disp.photoUrl}
+                            alt="صورة إثبات المحادثة"
+                            className="max-h-48 max-w-full sm:max-w-md rounded-xl object-cover border border-slate-200 group-hover:opacity-90 transition-opacity"
+                          />
+                          <div className="absolute inset-0 bg-black/30 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity">
+                            انقر للتكبير بالحجم الكامل
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Two Accounts Section (Customer & Provider) with Exact 3 Action Buttons */}
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-black text-slate-700 tracking-wide uppercase">
+                        الحسابات المرتبطة بالنزاع وإجراءات العقوبات المتاحة:
+                      </h4>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* 1. Customer Account Box */}
+                        <div className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                          customerStatus === 'banned' ? 'bg-rose-50/70 border-rose-200' :
+                          customerStatus === 'suspended' ? 'bg-orange-50/70 border-orange-200' :
+                          customerWarnings > 0 ? 'bg-amber-50/60 border-amber-200' :
+                          'bg-white border-slate-200 shadow-2xs'
+                        }`}>
+                          <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-black text-slate-900">{customerName}</span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">
+                                  حساب العميل
+                                </span>
+                              </div>
+                              <p className="text-xs font-mono text-slate-500 flex items-center gap-1">
+                                <Phone className="w-3 h-3 text-slate-400" />
+                                <span>{customerPhone}</span>
+                              </p>
+                            </div>
+
+                            {/* Customer Status Badge */}
+                            <div>
+                              {customerStatus === 'banned' && (
+                                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-rose-600 text-white">
+                                  ⛔ محظور نهائياً
+                                </span>
+                              )}
+                              {customerStatus === 'suspended' && (
+                                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-orange-500 text-white">
+                                  🚫 موقوف مؤقتاً
+                                </span>
+                              )}
+                              {customerStatus === 'active' && customerWarnings > 0 && (
+                                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-amber-500 text-white">
+                                  ⚠️ {customerWarnings} إنذارات
+                                </span>
+                              )}
+                              {customerStatus === 'active' && customerWarnings === 0 && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                                  ✓ نشط
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Customer 3 Actions */}
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-slate-500 block">الإجراءات الإدارية للعميل:</span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {/* 1. Action: Warn */}
+                              <button
+                                type="button"
+                                onClick={() => handleApplyPenalty(customerUserId, customerName, customerPhone, 'customer', 'warn')}
+                                disabled={actionLoading}
+                                className="h-8 px-3 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 active:scale-95 text-amber-900 text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                title="إرسال إنذار رسمي يظهر في إشعارات العميل"
+                              >
+                                <BellRing className="w-3.5 h-3.5 text-amber-600" />
+                                <span>إنذار</span>
+                              </button>
+
+                              {/* 2. Action: Suspend */}
+                              <button
+                                type="button"
+                                onClick={() => handleApplyPenalty(customerUserId, customerName, customerPhone, 'customer', 'suspend')}
+                                disabled={actionLoading || customerStatus === 'suspended'}
+                                className="h-8 px-3 rounded-xl border border-orange-300 bg-orange-50 hover:bg-orange-100 active:scale-95 text-orange-900 text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                title="إيقاف الحساب مؤقتاً ومنعه من الدخول"
+                              >
+                                <PauseCircle className="w-3.5 h-3.5 text-orange-600" />
+                                <span>إيقاف مؤقت</span>
+                              </button>
+
+                              {/* 3. Action: Ban */}
+                              <button
+                                type="button"
+                                onClick={() => handleApplyPenalty(customerUserId, customerName, customerPhone, 'customer', 'ban')}
+                                disabled={actionLoading || customerStatus === 'banned'}
+                                className="h-8 px-3 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-900 text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                title="حظر الحساب نهائياً وحظر رقم الهاتف من إعادة التسجيل"
+                              >
+                                <Ban className="w-3.5 h-3.5 text-rose-600" />
+                                <span>حظر نهائي</span>
+                              </button>
+
+                              {/* Optional: Reactivate if suspended or banned */}
+                              {(customerStatus === 'suspended' || customerStatus === 'banned') && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyPenalty(customerUserId, customerName, customerPhone, 'customer', 'activate')}
+                                  disabled={actionLoading}
+                                  className="h-8 px-3 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-800 text-xs font-bold transition-all inline-flex items-center gap-1 cursor-pointer"
+                                  title="إلغاء العقوبة واستعادة تنشيط الحساب"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>تنشيط</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 2. Provider Account Box */}
+                        <div className={`p-4 rounded-2xl border transition-all space-y-3 ${
+                          providerStatus === 'banned' ? 'bg-rose-50/70 border-rose-200' :
+                          providerStatus === 'suspended' ? 'bg-orange-50/70 border-orange-200' :
+                          providerWarnings > 0 ? 'bg-amber-50/60 border-amber-200' :
+                          'bg-white border-slate-200 shadow-2xs'
+                        }`}>
+                          <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-black text-slate-900">{providerName}</span>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                                  حساب الفني
+                                </span>
+                              </div>
+                              <p className="text-xs font-mono text-slate-500 flex items-center gap-1">
+                                <Phone className="w-3 h-3 text-slate-400" />
+                                <span>{providerPhone}</span>
+                              </p>
+                            </div>
+
+                            {/* Provider Status Badge */}
+                            <div>
+                              {providerStatus === 'banned' && (
+                                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-rose-600 text-white">
+                                  ⛔ محظور نهائياً
+                                </span>
+                              )}
+                              {providerStatus === 'suspended' && (
+                                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-orange-500 text-white">
+                                  🚫 موقوف مؤقتاً
+                                </span>
+                              )}
+                              {providerStatus === 'active' && providerWarnings > 0 && (
+                                <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-amber-500 text-white">
+                                  ⚠️ {providerWarnings} إنذارات
+                                </span>
+                              )}
+                              {providerStatus === 'active' && providerWarnings === 0 && (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                                  ✓ نشط
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Provider 3 Actions */}
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-bold text-slate-500 block">الإجراءات الإدارية للفني:</span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {/* 1. Action: Warn */}
+                              <button
+                                type="button"
+                                onClick={() => handleApplyPenalty(providerUserId, providerName, providerPhone, 'provider', 'warn')}
+                                disabled={actionLoading}
+                                className="h-8 px-3 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 active:scale-95 text-amber-900 text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                title="إرسال إنذار رسمي يظهر في إشعارات الفني"
+                              >
+                                <BellRing className="w-3.5 h-3.5 text-amber-600" />
+                                <span>إنذار</span>
+                              </button>
+
+                              {/* 2. Action: Suspend */}
+                              <button
+                                type="button"
+                                onClick={() => handleApplyPenalty(providerUserId, providerName, providerPhone, 'provider', 'suspend')}
+                                disabled={actionLoading || providerStatus === 'suspended'}
+                                className="h-8 px-3 rounded-xl border border-orange-300 bg-orange-50 hover:bg-orange-100 active:scale-95 text-orange-900 text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                title="إيقاف حساب الفني مؤقتاً ومنعه من الدخول والظهور للعملاء"
+                              >
+                                <PauseCircle className="w-3.5 h-3.5 text-orange-600" />
+                                <span>إيقاف مؤقت</span>
+                              </button>
+
+                              {/* 3. Action: Ban */}
+                              <button
+                                type="button"
+                                onClick={() => handleApplyPenalty(providerUserId, providerName, providerPhone, 'provider', 'ban')}
+                                disabled={actionLoading || providerStatus === 'banned'}
+                                className="h-8 px-3 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-900 text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                title="حظر الفني نهائياً وحظر رقم هاتفه من إعادة التسجيل"
+                              >
+                                <Ban className="w-3.5 h-3.5 text-rose-600" />
+                                <span>حظر نهائي</span>
+                              </button>
+
+                              {/* Optional: Reactivate if suspended or banned */}
+                              {(providerStatus === 'suspended' || providerStatus === 'banned') && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleApplyPenalty(providerUserId, providerName, providerPhone, 'provider', 'activate')}
+                                  disabled={actionLoading}
+                                  className="h-8 px-3 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 active:scale-95 text-emerald-800 text-xs font-bold transition-all inline-flex items-center gap-1 cursor-pointer"
+                                  title="إلغاء العقوبة واستعادة تنشيط حساب الفني"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>تنشيط</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-xs">
-                      <span className="text-slate-400 block mb-0.5 font-bold">مقدم البلاغ:</span>
-                      <p className="font-bold text-slate-900">{disp.userName} ({disp.userRole === 'customer' ? 'عميل' : 'فني'})</p>
-                      <p className="text-slate-500 font-mono mt-0.5">{disp.userPhone || 'بدون هاتف'}</p>
-                    </div>
-
-                    <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-xs">
-                      <span className="text-slate-400 block mb-0.5 font-bold">الطرف المشكو في حقه:</span>
-                      <p className="font-bold text-slate-900">{disp.providerName}</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs text-xs text-slate-800 leading-relaxed font-medium">
-                    <span className="font-bold text-slate-900 block mb-1">تفاصيل الشكوى:</span>
-                    <p className="whitespace-pre-wrap">{disp.details}</p>
-                  </div>
-
-                  {disp.photoUrl && (
-                    <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-xs">
-                      <span className="text-xs font-bold text-slate-700 block mb-1.5">صورة الإثبات المرفقة:</span>
-                      <img
-                        src={disp.photoUrl}
-                        alt="صورة إثبات النزاع"
-                        className="max-h-48 rounded-xl object-cover border border-slate-200"
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -1044,6 +1393,37 @@ export function AdminDashboardView() {
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Screenshot / Proof Photo Preview Modal */}
+      {selectedPhotoPreview && (
+        <div
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setSelectedPhotoPreview(null)}
+        >
+          <div
+            className="bg-white rounded-3xl max-w-2xl w-full p-5 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="font-bold text-slate-900 text-sm">صورة إثبات النزاع (سكرين شوت المحادثة)</h3>
+              <button
+                type="button"
+                onClick={() => setSelectedPhotoPreview(null)}
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex justify-center bg-slate-950/5 rounded-2xl p-2 max-h-[70vh] overflow-auto">
+              <img
+                src={selectedPhotoPreview}
+                alt="إثبات النزاع الكامل"
+                className="max-h-[65vh] object-contain rounded-xl"
+              />
             </div>
           </div>
         </div>

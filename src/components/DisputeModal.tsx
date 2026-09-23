@@ -11,24 +11,37 @@ interface DisputeModalProps {
   onDisputeSubmitted?: (dispute: Dispute) => void;
 }
 
-const DISPUTE_REASONS = [
-  'عدم الالتزام بالموعد المتفق عليه',
-  'طلب مبالغ إضافية غير متفق عليها مسبقاً',
-  'سوء تعامل أو سلوك غير لائق',
-  'عدم إتقان العمل أو حدوث تلفيات',
-  'إلغاء مفاجئ من الطرف الآخر بدون عذر مقبول',
-  'أخرى (توضيح في الوصف أدناه)'
+const CUSTOMER_REASONS = [
+  'تأخر عن الموعد',
+  'طلب مبلغ إضافي',
+  'جودة سيئة',
+  'أخرى'
+];
+
+const PROVIDER_REASONS = [
+  'عنوان وهمي',
+  'العميل لم يرد',
+  'رفض الدفع',
+  'أخرى'
 ];
 
 export function DisputeModal({ isOpen, onClose, booking, onDisputeSubmitted }: DisputeModalProps) {
   const { user } = useAuth();
-  const [reasonCategory, setReasonCategory] = useState(DISPUTE_REASONS[0]);
+  const isProvider = user?.role === 'provider' || user?.id === booking.providerUserId || user?.id === booking.provider?.user?.id;
+  const reasons = isProvider ? PROVIDER_REASONS : CUSTOMER_REASONS;
+
+  const [reasonCategory, setReasonCategory] = useState(reasons[0]);
   const [details, setDetails] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Sync reason category if role context switches
+  React.useEffect(() => {
+    setReasonCategory(reasons[0]);
+  }, [isProvider]);
 
   if (!isOpen) return null;
 
@@ -54,22 +67,26 @@ export function DisputeModal({ isOpen, onClose, booking, onDisputeSubmitted }: D
     setError(null);
 
     if (!details.trim()) {
-      setError('يرجى كتابة تفاصيل الشكوى أو المشكلة لتتمكن الإدارة من المتابعة');
+      setError('يرجى كتابة تفاصيل الشكوى أو المشكلة لتتمكن الإدارة من المتابعة واتخاذ الإجراء');
       return;
     }
 
     setSubmitting(true);
     try {
-      const isCustomer = user?.role === 'customer' || user?.id === booking.customerUserId;
       const dispute = await api.submitDispute({
         bookingId: booking.id,
         bookingNumber: booking.bookingNumber,
-        userId: user?.id || 'usr_guest',
-        userName: user?.name || (isCustomer ? booking.customer?.name : booking.provider?.businessName) || 'مستخدم المنصة',
-        userPhone: user?.phone || (isCustomer ? booking.customerPhone : booking.provider?.user?.phone) || '',
-        userRole: isCustomer ? 'customer' : 'provider',
+        userId: user?.id || (isProvider ? (booking.providerUserId || 'usr_provider1') : (booking.customerUserId || 'usr_customer1')),
+        userName: user?.name || (isProvider ? booking.provider?.businessName : booking.customer?.name) || (isProvider ? 'الفني' : 'العميل'),
+        userPhone: user?.phone || (isProvider ? booking.provider?.user?.phone : booking.customerPhone) || '',
+        userRole: isProvider ? 'provider' : 'customer',
+        customerUserId: booking.customerUserId || booking.customerId || 'usr_customer1',
+        customerName: booking.customer?.name || booking.customer?.user?.name || 'العميل',
+        customerPhone: booking.customerPhone || booking.customer?.phone || booking.customer?.user?.phone || '',
         providerId: booking.providerId,
+        providerUserId: booking.providerUserId || booking.provider?.user?.id || 'usr_provider1',
         providerName: booking.provider?.businessName || 'مقدم الخدمة',
+        providerPhone: booking.provider?.user?.phone || '',
         reasonCategory,
         details: details.trim(),
         photoUrl: photoUrl || undefined
@@ -134,13 +151,18 @@ export function DisputeModal({ isOpen, onClose, booking, onDisputeSubmitted }: D
             )}
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">سبب الشكوى أو النزاع:</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 block">سبب الشكوى أو النزاع:</label>
+                <span className="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">
+                  {isProvider ? 'خيارات الفني' : 'خيارات العميل'}
+                </span>
+              </div>
               <select
                 value={reasonCategory}
                 onChange={e => setReasonCategory(e.target.value)}
                 className="w-full h-12 px-3.5 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 text-slate-900 text-sm font-semibold transition-all outline-none cursor-pointer"
               >
-                {DISPUTE_REASONS.map((r, i) => (
+                {reasons.map((r, i) => (
                   <option key={i} value={r}>{r}</option>
                 ))}
               </select>
@@ -158,13 +180,13 @@ export function DisputeModal({ isOpen, onClose, booking, onDisputeSubmitted }: D
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 block">إرفاق صورة إثبات (اختياري):</label>
+              <label className="text-xs font-bold text-slate-700 block">رفع صورة (إثبات المحادثة / سكرين شوت - اختياري):</label>
               <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center hover:border-slate-400 transition-colors bg-slate-50/50">
                 {imagePreview ? (
                   <div className="relative inline-block">
                     <img
                       src={imagePreview}
-                      alt="معاينة"
+                      alt="معاينة إثبات المحادثة"
                       className="max-h-36 rounded-xl object-cover border border-slate-200 mx-auto shadow-xs"
                     />
                     <button
@@ -182,8 +204,8 @@ export function DisputeModal({ isOpen, onClose, booking, onDisputeSubmitted }: D
                 ) : (
                   <label className="cursor-pointer block">
                     <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1.5" />
-                    <span className="text-xs font-semibold text-slate-600 block">انقر لرفع صورة العطل أو المحادثة</span>
-                    <span className="text-[11px] text-slate-400 block mt-0.5">PNG, JPG حتى 5 ميجابايت</span>
+                    <span className="text-xs font-semibold text-slate-600 block">انقر لرفع صورة إثبات (سكرين شوت المحادثة أو العطل)</span>
+                    <span className="text-[11px] text-slate-400 block mt-0.5">PNG, JPG حتى 5 ميجابايت (اختياري)</span>
                     <input
                       type="file"
                       accept="image/*"

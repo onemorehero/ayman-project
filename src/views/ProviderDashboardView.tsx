@@ -10,6 +10,7 @@ import {
   MessageCircle,
   MessageSquare,
   AlertCircle,
+  AlertTriangle,
   Calendar,
   Sparkles,
   Edit2,
@@ -27,6 +28,11 @@ import { api } from '../lib/api.js';
 import { CompleteBookingModal } from '../components/CompleteBookingModal.js';
 import { DisputeModal } from '../components/DisputeModal.js';
 import type { Booking, Provider, Review, BookingStatus, Service, Location } from '../types.js';
+
+// Slug helpers for provider unique direct URLs
+const generateRandomSlug = () => `pro-${Math.random().toString(36).substring(2, 8)}`;
+const hasArabic = (str: string) => /[\u0600-\u06FF]/.test(str);
+const isValidSlug = (str: string) => /^[a-zA-Z0-9-]+$/.test(str);
 
 export function ProviderDashboardView() {
   const { user, provider } = useAuth();
@@ -53,6 +59,8 @@ export function ProviderDashboardView() {
   const [editServiceIds, setEditServiceIds] = useState<string[]>([]);
   const [editAreaIds, setEditAreaIds] = useState<string[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
+  const [editSlug, setEditSlug] = useState('');
+  const [slugError, setSlugError] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
 
@@ -81,6 +89,14 @@ export function ProviderDashboardView() {
         setEditServiceIds((provData.serviceIds || []).slice(0, 3));
         setEditAreaIds(provData.areaIds || []);
         setEditIsActive(provData.isActive ?? true);
+
+        // Automatic slug generation: if empty, contains Arabic, or invalid format
+        let currentSlug = (provData.slug || '').trim();
+        if (!currentSlug || hasArabic(currentSlug) || !isValidSlug(currentSlug)) {
+          currentSlug = generateRandomSlug();
+        }
+        setEditSlug(currentSlug);
+        setSlugError(null);
 
         const [provBookings, provReviews] = await Promise.all([
           api.getBookings({ providerId: provData.id }),
@@ -145,6 +161,33 @@ export function ProviderDashboardView() {
       return;
     }
 
+    const trimmedSlug = editSlug.trim().toLowerCase();
+    if (!trimmedSlug) {
+      setSlugError('يرجى تحديد رابط الصفحة المخصص لملفك المهني.');
+      return;
+    }
+
+    if (hasArabic(trimmedSlug)) {
+      setSlugError('غير مسموح بالحروف العربية في الرابط المخصص. يرجى استخدام الحروف الإنجليزية فقط.');
+      return;
+    }
+
+    if (/\s/.test(trimmedSlug)) {
+      setSlugError('غير مسموح بالمسافات في الرابط. يمكنك استخدام الشرطة (-) للفصل بين الكلمات.');
+      return;
+    }
+
+    if (!isValidSlug(trimmedSlug)) {
+      setSlugError('الرابط يجب أن يحتوي فقط على حروف إنجليزية (a-z)، أرقام (0-9)، وشرطات (-) بدون رموز خاصة.');
+      return;
+    }
+
+    if (trimmedSlug.length < 3) {
+      setSlugError('يجب أن يتكون الرابط من 3 أحرف أو أرقام على الأقل.');
+      return;
+    }
+
+    setSlugError(null);
     setSavingProfile(true);
     setProfileSuccessMsg(null);
     try {
@@ -154,10 +197,12 @@ export function ProviderDashboardView() {
         experienceYears: editExperienceYears,
         serviceIds: editServiceIds,
         areaIds: editAreaIds,
-        isActive: editIsActive
+        isActive: editIsActive,
+        slug: trimmedSlug
       });
       setProviderDetails(updated);
-      setProfileSuccessMsg('تم حفظ بيانات ملفك الشخصي بنجاح');
+      setEditSlug(updated.slug || trimmedSlug);
+      setProfileSuccessMsg('تم حفظ بيانات ملفك الشخصي والرابط المخصص بنجاح');
       setTimeout(() => setProfileSuccessMsg(null), 3000);
     } catch (err: any) {
       alert(err.message || 'فشل حفظ الملف الشخصي');
@@ -502,17 +547,16 @@ export function ProviderDashboardView() {
                         </div>
                       )}
 
-                      {/* Dispute Button: Available if cancelled or conflict */}
-                      {(isCancelled || isAccepted) && (
-                        <button
-                          type="button"
-                          onClick={() => setDisputeBooking(b)}
-                          className="h-11 px-3.5 rounded-2xl border border-rose-200 text-rose-800 hover:bg-rose-50 active:scale-95 text-xs font-bold transition-colors inline-flex items-center gap-1.5"
-                        >
-                          <ShieldAlert className="w-4 h-4 text-rose-600" />
-                          <span>إبلاغ الإدارة عن نزاع</span>
-                        </button>
-                      )}
+                      {/* Dispute Button: Available to report issue/fake address/cancellation */}
+                      <button
+                        type="button"
+                        onClick={() => setDisputeBooking(b)}
+                        className="h-11 px-3.5 rounded-2xl border border-rose-200 text-rose-800 hover:bg-rose-50 active:scale-95 text-xs font-bold transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                        title="إبلاغ الإدارة عن مشكلة في هذا الطلب"
+                      >
+                        <ShieldAlert className="w-4 h-4 text-rose-600" />
+                        <span>إبلاغ عن مشكلة</span>
+                      </button>
 
                       {/* Review status (Strictly hidden for PENDING or REJECTED) */}
                       {(isAccepted || isCompleted) && b.review && (
@@ -605,6 +649,79 @@ export function ProviderDashboardView() {
               onChange={e => setEditBusinessName(e.target.value)}
               className="w-full h-12 px-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-semibold transition-all outline-none"
             />
+          </div>
+
+          {/* Custom Page Link (Slug) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700 block">
+                رابط الصفحة المخصص:
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  const newRandom = generateRandomSlug();
+                  setEditSlug(newRandom);
+                  setSlugError(null);
+                }}
+                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 transition-colors cursor-pointer flex items-center gap-1 active:scale-95"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <span>توليد رابط عشوائي جديد</span>
+              </button>
+            </div>
+
+            <div className="relative flex items-center">
+              <span
+                className="absolute right-3.5 text-slate-400 font-mono text-xs select-none pointer-events-none"
+                dir="ltr"
+              >
+                /provider/
+              </span>
+              <input
+                type="text"
+                value={editSlug}
+                onChange={e => {
+                  const val = e.target.value;
+                  setEditSlug(val);
+                  if (hasArabic(val)) {
+                    setSlugError('غير مسموح بالحروف العربية في الرابط المخصص. يرجى استخدام الحروف الإنجليزية فقط.');
+                  } else if (/\s/.test(val)) {
+                    setSlugError('غير مسموح بالمسافات في الرابط. استخدم الشرطة (-) للفصل.');
+                  } else if (val && !isValidSlug(val)) {
+                    setSlugError('يسمح فقط بالحروف الإنجليزية والأرقام والشرطات (a-z, 0-9, -).');
+                  } else {
+                    setSlugError(null);
+                  }
+                }}
+                placeholder="pro-xyz123"
+                dir="ltr"
+                className={`w-full h-12 pr-24 pl-4 rounded-2xl border font-mono text-sm font-semibold transition-all outline-none text-left ${
+                  slugError
+                    ? 'border-rose-400 bg-rose-50/40 text-rose-900 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+                    : 'bg-slate-100/80 border-transparent text-slate-900 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20'
+                }`}
+              />
+            </div>
+
+            {slugError ? (
+              <p className="text-[11px] text-rose-600 font-bold flex items-center gap-1.5 mt-1 bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                <span>{slugError}</span>
+              </p>
+            ) : (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between text-[11px] text-slate-500 gap-1 pt-0.5">
+                <span>
+                  معاينة رابط صفحتك المباشر:{' '}
+                  <span className="font-mono text-emerald-700 font-bold" dir="ltr">
+                    {typeof window !== 'undefined' ? window.location.origin : ''}/provider/{editSlug || '...'}
+                  </span>
+                </span>
+                <span className="text-slate-400 text-[10px]">
+                  (يسمح فقط بالحروف الإنجليزية، الأرقام، والشرطات)
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">

@@ -68,6 +68,15 @@ export function Footer({ onNavigate }: Props) {
                   لوحة تحكم الفني
                 </button>
               </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onNavigate('terms')}
+                  className="hover:text-emerald-400 transition-colors font-semibold text-emerald-400/90"
+                >
+                  ميثاق المجتمع والشروط
+                </button>
+              </li>
             </ul>
           </div>
 

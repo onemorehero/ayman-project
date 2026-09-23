@@ -20,7 +20,7 @@ import { useAuth } from '../context/AuthContext.js';
 import { api } from '../lib/api.js';
 import { ReviewModal } from '../components/ReviewModal.js';
 import { DisputeModal } from '../components/DisputeModal.js';
-import { BookingModal } from '../components/BookingModal.js';
+import { BookingModal, type InitialBookingData } from '../components/BookingModal.js';
 import type { Booking, Provider } from '../types.js';
 
 interface Props {
@@ -38,8 +38,9 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
   const [selectedBookingForDispute, setSelectedBookingForDispute] = useState<Booking | null>(null);
   const [rebookingProvider, setRebookingProvider] = useState<Provider | null>(null);
   const [rebookingInitialServiceId, setRebookingInitialServiceId] = useState<string | undefined>(undefined);
+  const [rebookingInitialData, setRebookingInitialData] = useState<InitialBookingData | undefined>(undefined);
 
-  // Alternative providers cache by category
+  // Alternative providers cache by booking ID and category
   const [suggestedProvidersMap, setSuggestedProvidersMap] = useState<Record<string, Provider[]>>({});
 
   const fetchBookings = () => {
@@ -48,19 +49,33 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
     api.getBookings({ customerUserId: user.id })
       .then(data => {
         setBookings(data);
-        // Preload alternative providers for rejected bookings
-        const rejected = data.filter(b => b.status === 'REJECTED');
-        rejected.forEach(b => {
+        // Preload alternative providers for both rejected and cancelled bookings
+        const needsAlternatives = data.filter(b => b.status === 'REJECTED' || b.status === 'CANCELLED');
+        needsAlternatives.forEach(b => {
           const catId = b.service?.categoryId || b.category?.id;
-          if (catId && !suggestedProvidersMap[catId]) {
-            api.getAlternativeProviders(catId, b.providerId).then(alts => {
-              setSuggestedProvidersMap(prev => ({ ...prev, [catId]: alts }));
-            }).catch(() => {});
-          }
+          api.getAlternativeProviders(catId, b.providerId, b.serviceId).then(alts => {
+            setSuggestedProvidersMap(prev => ({
+              ...prev,
+              [b.id]: alts,
+              ...(catId ? { [catId]: alts } : {})
+            }));
+          }).catch(() => {});
         });
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+  };
+
+  const handleOneClickResubmit = (booking: Booking, targetProvider: Provider) => {
+    setRebookingProvider(targetProvider);
+    setRebookingInitialServiceId(booking.serviceId);
+    setRebookingInitialData({
+      problemDescription: booking.problemDescription,
+      addressDetails: booking.addressDetails,
+      customerPhone: booking.customerPhone || user?.phone || '',
+      urgency: booking.urgency || 'normal',
+      locationId: booking.locationId
+    });
   };
 
   useEffect(() => {
@@ -194,7 +209,7 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
 
             const providerPhone = b.provider?.user?.phone || '01000000000';
             const catId = b.service?.categoryId || b.category?.id;
-            const alternatives = catId ? (suggestedProvidersMap[catId] || []) : [];
+            const alternatives = suggestedProvidersMap[b.id] || (catId ? (suggestedProvidersMap[catId] || []) : []);
 
             return (
               <div
@@ -257,15 +272,15 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
                       </span>
                     )}
 
-                    {/* Subtle "إبلاغ للإدارة" button */}
+                    {/* "إبلاغ عن مشكلة" button */}
                     <button
                       type="button"
                       onClick={() => setSelectedBookingForDispute(b)}
-                      className="text-xs text-slate-400 hover:text-rose-600 px-2 py-1 rounded-lg transition-colors inline-flex items-center gap-1"
-                      title="إبلاغ الإدارة عن أي مشكلة أو تلاعب"
+                      className="text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 px-2.5 py-1 rounded-xl transition-all inline-flex items-center gap-1 cursor-pointer active:scale-95"
+                      title="إبلاغ عن مشكلة أو تلاعب"
                     >
-                      <ShieldAlert className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">إبلاغ للإدارة</span>
+                      <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                      <span>إبلاغ عن مشكلة</span>
                     </button>
                   </div>
                 </div>
@@ -299,17 +314,19 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
                   </div>
                 </div>
 
-                {/* CASE: REJECTED -> Smooth Horizontal Scroll for Available Alternative Providers */}
-                {isRejected && (
+                {/* CASE: REJECTED or CANCELLED -> Suggest alternative providers with One-Click Resubmit */}
+                {(isRejected || isCancelled) && (
                   <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="space-y-0.5">
                         <h4 className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                          <AlertCircle className="w-4 h-4 text-amber-700" />
-                          <span>فنيون متاحون الآن من نفس التخصص:</span>
+                          <Sparkles className="w-4 h-4 text-emerald-600" />
+                          <span>فنيين مقترحين كبديل:</span>
                         </h4>
                         <p className="text-[11px] text-amber-900/80">
-                          أرسل نفس تفاصيل طلبك بنقرة واحدة لأحد الفنيين البدلاء:
+                          {isRejected
+                            ? 'اعتذر الفني عن هذا الطلب؛ يمكنك إرسال نفس تفاصيل طلبك مباشرة بنقرة واحدة لفني بديل متاح:'
+                            : 'تم إلغاء هذا الطلب؛ يمكنك إعادة إرسال نفس تفاصيل طلبك مباشرة لأحد الفنيين البدلاء:'}
                         </p>
                       </div>
 
@@ -340,30 +357,29 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
                                 <p className="text-xs font-bold text-slate-900 truncate">{alt.businessName}</p>
                                 <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-0.5">
                                   <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                                  <span className="font-bold text-slate-800">{alt.rating.toFixed(1)}</span>
+                                  <span className="font-bold text-slate-800">
+                                    {alt.rating ? alt.rating.toFixed(1) : '5.0'}
+                                  </span>
                                   <span>·</span>
-                                  <span>{alt.experienceYears} سنين خبرة</span>
+                                  <span>{alt.experienceYears || 3} سنين خبرة</span>
                                 </div>
                               </div>
                             </div>
 
                             <button
                               type="button"
-                              onClick={() => {
-                                setRebookingProvider(alt);
-                                setRebookingInitialServiceId(b.serviceId);
-                              }}
-                              className="w-full h-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold transition-all shadow-sm shadow-emerald-600/20 flex items-center justify-center gap-1"
+                              onClick={() => handleOneClickResubmit(b, alt)}
+                              className="w-full h-9 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold transition-all shadow-sm shadow-emerald-600/20 flex items-center justify-center gap-1.5 cursor-pointer"
                             >
-                              <span>اطلب منه الآن</span>
-                              <ChevronLeft className="w-3.5 h-3.5" />
+                              <Zap className="w-3.5 h-3.5 text-white" />
+                              <span>إرسال نفس الطلب</span>
                             </button>
                           </div>
                         ))}
                       </div>
                     ) : (
                       <div className="flex items-center justify-between bg-white rounded-xl p-3 border border-amber-200 text-xs text-slate-600">
-                        <span>لا توجد ترشيحات مباشرة حالياً في هذا الحي</span>
+                        <span>لا توجد ترشيحات مباشرة حالياً في هذا القسم</span>
                         <button
                           type="button"
                           onClick={() => onNavigateToProvider('')}
@@ -472,11 +488,18 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
       {rebookingProvider && (
         <BookingModal
           isOpen={Boolean(rebookingProvider)}
-          onClose={() => setRebookingProvider(null)}
+          onClose={() => {
+            setRebookingProvider(null);
+            setRebookingInitialData(undefined);
+            setRebookingInitialServiceId(undefined);
+          }}
           provider={rebookingProvider}
           initialServiceId={rebookingInitialServiceId}
+          initialBookingData={rebookingInitialData}
           onBookingCreated={() => {
             setRebookingProvider(null);
+            setRebookingInitialData(undefined);
+            setRebookingInitialServiceId(undefined);
             fetchBookings();
           }}
         />

@@ -1,4 +1,5 @@
 export type UserRole = 'customer' | 'provider' | 'admin';
+export type UserStatus = 'active' | 'suspended' | 'banned';
 
 export type BookingStatus =
   | 'PENDING'
@@ -18,6 +19,9 @@ export interface User {
   avatarUrl: string;
   password?: string;
   createdAt: string;
+  status?: UserStatus;
+  warningCount?: number;
+  lastWarningReason?: string;
 }
 
 export interface Customer {
@@ -136,18 +140,22 @@ export interface Booking {
   updatedAt: string;
   // Relations for convenient UI rendering
   customer?: {
+    id?: string;
     name: string;
     phone: string;
     avatarUrl?: string;
     user?: {
+      id?: string;
       name: string;
       phone: string;
       avatarUrl?: string;
     };
   };
   provider?: {
+    id?: string;
     businessName: string;
     user?: {
+      id?: string;
       name: string;
       phone: string;
       avatarUrl?: string;
@@ -261,8 +269,13 @@ export interface Dispute {
   userName?: string;
   userPhone?: string;
   userRole: 'customer' | 'provider';
+  customerUserId?: string;
+  customerName?: string;
+  customerPhone?: string;
   providerId: string;
+  providerUserId?: string;
   providerName?: string;
+  providerPhone?: string;
   reasonCategory: string;
   details: string;
   photoUrl?: string;

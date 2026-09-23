@@ -13,15 +13,32 @@ import { useAuth } from '../context/AuthContext.js';
 import { api } from '../lib/api.js';
 import type { Provider, Service, Location } from '../types.js';
 
+export interface InitialBookingData {
+  problemDescription?: string;
+  addressDetails?: string;
+  customerPhone?: string;
+  urgency?: 'normal' | 'urgent';
+  locationId?: string;
+  customServiceName?: string;
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   provider: Provider & { services?: Service[]; areas?: Location[] };
   initialServiceId?: string;
+  initialBookingData?: InitialBookingData;
   onBookingCreated: (booking: any) => void;
 }
 
-export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBookingCreated }: Props) {
+export function BookingModal({
+  isOpen,
+  onClose,
+  provider,
+  initialServiceId,
+  initialBookingData,
+  onBookingCreated
+}: Props) {
   const { user, customer } = useAuth();
 
   const [services, setServices] = useState<Service[]>([]);
@@ -29,28 +46,52 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
 
   // Form state - Quick Request (No visit date or time)
   const [selectedServiceId, setSelectedServiceId] = useState(initialServiceId || '');
-  const [customServiceName, setCustomServiceName] = useState('');
-  const [problemDescription, setProblemDescription] = useState('');
-  const [customerPhone, setCustomerPhone] = useState(user?.phone || '');
-  const [locationId, setLocationId] = useState('');
-  const [addressDetails, setAddressDetails] = useState(customer?.address || '');
-  const [urgency, setUrgency] = useState<'normal' | 'urgent'>('normal');
+  const [customServiceName, setCustomServiceName] = useState(initialBookingData?.customServiceName || '');
+  const [problemDescription, setProblemDescription] = useState(initialBookingData?.problemDescription || '');
+  const [customerPhone, setCustomerPhone] = useState(initialBookingData?.customerPhone || user?.phone || '');
+  const [locationId, setLocationId] = useState(initialBookingData?.locationId || '');
+  const [addressDetails, setAddressDetails] = useState(initialBookingData?.addressDetails || customer?.address || '');
+  const [urgency, setUrgency] = useState<'normal' | 'urgent'>(initialBookingData?.urgency || 'normal');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync phone & address from Auth in background
+  // Sync state when modal opens or initialBookingData changes
   useEffect(() => {
-    if (user?.phone && !customerPhone) {
-      setCustomerPhone(user.phone);
-    }
-  }, [user]);
+    if (!isOpen) return;
 
-  useEffect(() => {
-    if (customer?.address && !addressDetails) {
-      setAddressDetails(customer.address);
+    if (initialBookingData) {
+      if (initialBookingData.problemDescription !== undefined) {
+        setProblemDescription(initialBookingData.problemDescription);
+      }
+      if (initialBookingData.addressDetails !== undefined) {
+        setAddressDetails(initialBookingData.addressDetails);
+      }
+      if (initialBookingData.customerPhone !== undefined) {
+        setCustomerPhone(initialBookingData.customerPhone);
+      }
+      if (initialBookingData.urgency !== undefined) {
+        setUrgency(initialBookingData.urgency);
+      }
+      if (initialBookingData.locationId !== undefined) {
+        setLocationId(initialBookingData.locationId);
+      }
+      if (initialBookingData.customServiceName !== undefined) {
+        setCustomServiceName(initialBookingData.customServiceName);
+      }
+    } else {
+      if (user?.phone && !customerPhone) {
+        setCustomerPhone(user.phone);
+      }
+      if (customer?.address && !addressDetails) {
+        setAddressDetails(customer.address);
+      }
     }
-  }, [customer]);
+
+    if (initialServiceId) {
+      setSelectedServiceId(initialServiceId);
+    }
+  }, [isOpen, initialBookingData, initialServiceId, user, customer]);
 
   // Load services and locations for this provider (Enforce max 3 services for provider + Other)
   useEffect(() => {
@@ -106,7 +147,9 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
           setSelectedServiceId('other');
         }
 
-        if (provLocations.length > 0) {
+        if (initialBookingData?.locationId && provLocations.some(l => l.id === initialBookingData.locationId)) {
+          setLocationId(initialBookingData.locationId);
+        } else if (provLocations.length > 0) {
           setLocationId(provLocations[0].id);
         }
       } catch (err) {
@@ -119,7 +162,7 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
     return () => {
       isMounted = false;
     };
-  }, [isOpen, initialServiceId, provider]);
+  }, [isOpen, initialServiceId, initialBookingData, provider]);
 
   if (!isOpen) return null;
 
@@ -233,6 +276,14 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
             <X className="w-4 h-4" />
           </button>
         </div>
+
+        {/* If prefilled from previous booking */}
+        {initialBookingData && (
+          <div className="mx-6 mt-3 p-3 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center gap-2.5 text-xs text-emerald-950 font-semibold animate-in fade-in">
+            <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>تم ملء بيانات طلبك السابق تلقائياً؛ يمكنك مراجعتها وتأكيد الإرسال فوراً بضغطة زر.</span>
+          </div>
+        )}
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-4 text-right">

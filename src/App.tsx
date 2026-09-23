@@ -27,6 +27,7 @@ import { ProviderProfileView } from './views/ProviderProfileView.js';
 import { CustomerDashboardView } from './views/CustomerDashboardView.js';
 import { ProviderDashboardView } from './views/ProviderDashboardView.js';
 import { AdminDashboardView } from './views/AdminDashboardView.js';
+import { TermsView } from './views/TermsView.js';
 
 function ProviderProfileRouteWrapper({ onBookingSuccess }: { onBookingSuccess: (booking: any) => void }) {
   const { id } = useParams<{ id: string }>();
@@ -80,6 +81,7 @@ function MainApp() {
     if (path === '/customer') return 'customer-dashboard';
     if (path === '/provider-dashboard') return 'provider-dashboard';
     if (path === '/admin') return 'admin-dashboard';
+    if (path === '/terms') return 'terms';
     return 'home';
   };
 
@@ -110,6 +112,9 @@ function MainApp() {
           break;
         case 'admin-dashboard':
           navigate('/admin');
+          break;
+        case 'terms':
+          navigate('/terms');
           break;
         default:
           navigate('/');
@@ -223,6 +228,11 @@ function MainApp() {
           <Route
             path="/admin"
             element={<AdminDashboardView />}
+          />
+
+          <Route
+            path="/terms"
+            element={<TermsView />}
           />
 
           {/* Catch-all redirect to Home */}

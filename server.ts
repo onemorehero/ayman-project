@@ -71,6 +71,14 @@ async function startServer() {
       return res.status(401).json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' });
     }
 
+    if (user.status === 'suspended') {
+      return res.status(403).json({ error: 'تم إيقاف حسابك مؤقتاً بسبب مخالفة سياسات المنصة أو وجود شكوى قيد التحقيق. يرجى مراجعة إدارة خلصلى.' });
+    }
+
+    if (user.status === 'banned') {
+      return res.status(403).json({ error: 'تم حظر هذا الحساب نهائياً لمخالفة ميثاق مجتمع خلصلى.' });
+    }
+
     // Demo password check (allow matching password or simple demo)
     if (user.password && password && user.password !== password && password !== '123456') {
       return res.status(401).json({ error: 'كلمة المرور غير صحيحة' });
@@ -93,7 +101,10 @@ async function startServer() {
         phone: user.phone,
         role: user.role,
         avatarUrl: user.avatarUrl,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        status: user.status || 'active',
+        warningCount: user.warningCount || 0,
+        lastWarningReason: user.lastWarningReason
       },
       customer,
       provider
@@ -129,7 +140,10 @@ async function startServer() {
         phone: user.phone,
         role: user.role,
         avatarUrl: user.avatarUrl,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        status: user.status || 'active',
+        warningCount: user.warningCount || 0,
+        lastWarningReason: user.lastWarningReason
       },
       customer,
       provider
@@ -142,6 +156,10 @@ async function startServer() {
 
     if (!name || !email || !phone || !role) {
       return res.status(400).json({ error: 'يرجى ملء جميع الحقول الأساسية' });
+    }
+
+    if (db.isPhoneBanned(phone)) {
+      return res.status(403).json({ error: 'رقم الهاتف هذا محظور نهائياً من التسجيل في منصة خلصلى لمخالفة ميثاق المجتمع.' });
     }
 
     const existing = db.getUserByEmail(email);
@@ -171,6 +189,7 @@ async function startServer() {
         preferredAreaId: areaIds?.[0]
       });
     } else if (role === 'provider') {
+      const randomSlug = 'pro-' + Math.random().toString(36).substring(2, 8);
       provider = db.createProvider({
         id: `prov_${crypto.randomUUID()}`,
         userId: newUser.id,
@@ -181,6 +200,7 @@ async function startServer() {
         reviewCount: 0,
         isVerified: false,
         isActive: true,
+        slug: randomSlug,
         categoryIds: categoryIds || [],
         serviceIds: [],
         areaIds: areaIds || [],
@@ -392,7 +412,10 @@ async function startServer() {
 
   // Single provider details (with services, areas, reviews, and subscription)
   app.get('/api/providers/:id', (req, res) => {
-    const provider = db.getProviderById(req.params.id);
+    let provider = db.getProviderById(req.params.id);
+    if (!provider) {
+      provider = db.getProviders().find(p => p.slug === req.params.id) || null;
+    }
     if (!provider) return res.status(404).json({ error: 'مقدم الخدمة غير موجود' });
 
     // Attach full categories and services objects
@@ -719,6 +742,90 @@ async function startServer() {
   app.post('/api/admin/reset-demo', requireAdmin, (req, res) => {
     const fresh = db.resetToSeed();
     res.json({ message: 'تم استعادة بيانات العرض التجريبية المصرية بنجاح', stats: db.getPlatformStats() });
+  });
+
+  // ==========================================
+  // DISPUTES & PENALTIES (ADMIN & USERS)
+  // ==========================================
+
+  app.get('/api/disputes', (req, res) => {
+    res.json(db.getDisputes());
+  });
+
+  app.post('/api/disputes', (req, res) => {
+    try {
+      const {
+        bookingId,
+        bookingNumber,
+        userId,
+        userName,
+        userPhone,
+        userRole,
+        customerUserId,
+        customerName,
+        customerPhone,
+        providerId,
+        providerUserId,
+        providerName,
+        providerPhone,
+        reasonCategory,
+        details,
+        photoUrl
+      } = req.body;
+
+      if (!bookingId || !reasonCategory || !details) {
+        return res.status(400).json({ error: 'بيانات البلاغ غير مكتملة' });
+      }
+
+      const dispute = db.createDispute({
+        id: `disp_${crypto.randomUUID()}`,
+        bookingId,
+        bookingNumber: bookingNumber || '',
+        userId: userId || 'usr_anonymous',
+        userName: userName || 'مستخدم المنصة',
+        userPhone: userPhone || '',
+        userRole: userRole || 'customer',
+        customerUserId,
+        customerName,
+        customerPhone,
+        providerId: providerId || 'prov_unknown',
+        providerUserId,
+        providerName: providerName || 'مقدم الخدمة',
+        providerPhone,
+        reasonCategory,
+        details,
+        photoUrl,
+        status: 'pending',
+        createdAt: new Date().toISOString()
+      });
+
+      res.status(201).json(dispute);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'فشل تسجيل البلاغ' });
+    }
+  });
+
+  app.put('/api/disputes/:id/status', requireAdmin, (req, res) => {
+    const { status, adminNotes } = req.body;
+    if (!status) return res.status(400).json({ error: 'الحالة الجديدة مطلوبة' });
+
+    const updated = db.updateDisputeStatus(req.params.id, status, adminNotes);
+    if (!updated) return res.status(404).json({ error: 'البلاغ غير موجود' });
+
+    res.json(updated);
+  });
+
+  // Strict user penalties: warn, suspend, ban, activate
+  app.post('/api/admin/users/:id/penalty', requireAdmin, (req, res) => {
+    const { action, reason } = req.body; // 'warn' | 'suspend' | 'ban' | 'activate'
+    if (!action || !['warn', 'suspend', 'ban', 'activate'].includes(action)) {
+      return res.status(400).json({ error: 'نوع الإجراء غير صالح (warn, suspend, ban, activate)' });
+    }
+
+    const result = db.applyUserPenalty(req.params.id, action, reason);
+    if (!result) return res.status(404).json({ error: 'المستخدم غير موجود' });
+
+    res.json(result);
   });
 
   // ==========================================
