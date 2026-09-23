@@ -48,8 +48,11 @@ export interface Provider {
     daysOff: string[];
   };
   workPhotos: string[];
+  completedJobs?: number;
+  bankAccount?: any;
   nationalIdOrLicense?: string;
   createdAt: string;
+  slug?: string;
   // Hydrated user details if present
   user?: User;
 }
@@ -61,7 +64,8 @@ export interface Category {
   icon: string;
   slug: string;
   description: string;
-  sortOrder: number;
+  badge?: string;
+  sortOrder?: number;
   isActive: boolean;
   servicesCount?: number;
   providersCount?: number;
@@ -71,7 +75,11 @@ export interface Service {
   id: string;
   categoryId: string;
   nameAr: string;
+  nameEn?: string;
   description: string;
+  basePrice?: number;
+  priceType?: string;
+  durationApprox?: string;
   icon?: string;
   isActive: boolean;
 }
@@ -79,6 +87,7 @@ export interface Service {
 export interface Location {
   id: string;
   nameAr: string;
+  nameEn?: string;
   governorate: string;
   city: string;
   isActive: boolean;
@@ -130,6 +139,11 @@ export interface Booking {
     name: string;
     phone: string;
     avatarUrl?: string;
+    user?: {
+      name: string;
+      phone: string;
+      avatarUrl?: string;
+    };
   };
   provider?: {
     businessName: string;
@@ -184,11 +198,13 @@ export interface ProviderSubscription {
   id: string;
   providerId: string;
   planId: string;
-  status: 'active' | 'expired' | 'pending';
+  plan?: string | SubscriptionPlan;
+  monthlyFee?: number;
+  commissionDiscount?: number;
+  status: 'active' | 'expired' | 'pending' | 'ACTIVE' | 'EXPIRED' | 'PENDING';
   startDate: string;
   endDate: string;
   autoRenew: boolean;
-  plan?: SubscriptionPlan;
 }
 
 export interface Commission {
@@ -199,7 +215,7 @@ export interface Commission {
   commissionRate: number;
   commissionAmount: number;
   providerPayout: number;
-  status: 'collected' | 'pending' | 'waived';
+  status: 'collected' | 'pending' | 'waived' | 'COLLECTED' | 'PENDING' | 'WAIVED';
   createdAt: string;
   bookingNumber?: string;
   providerName?: string;
@@ -235,4 +251,23 @@ export interface PlatformStats {
   totalProviderEarnings: number;
   averageRating: number;
   totalReviews: number;
+}
+
+export interface Dispute {
+  id: string;
+  bookingId: string;
+  bookingNumber?: string;
+  userId: string;
+  userName?: string;
+  userPhone?: string;
+  userRole: 'customer' | 'provider';
+  providerId: string;
+  providerName?: string;
+  reasonCategory: string;
+  details: string;
+  photoUrl?: string;
+  status: 'pending' | 'in_review' | 'resolved' | 'dismissed';
+  adminNotes?: string;
+  createdAt: string;
+  resolvedAt?: string;
 }

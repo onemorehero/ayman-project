@@ -13,7 +13,8 @@ import type {
   Commission,
   AppNotification,
   PlatformStats,
-  BookingStatus
+  BookingStatus,
+  Dispute
 } from '../types.js';
 
 // ====================================================================
@@ -104,6 +105,7 @@ function mapCategory(row: any): Category {
     icon: row.icon || 'Wrench',
     slug: (row.id || '').replace('cat_', ''),
     description: row.description_ar || row.description || '',
+    badge: row.badge || undefined,
     sortOrder: Number(row.sort_order || 1),
     isActive: Boolean(row.is_active !== false)
   };
@@ -114,6 +116,7 @@ function mapLocation(row: any): Location {
   return {
     id: row.id,
     nameAr: row.name_ar || row.nameAr || '',
+    nameEn: row.name_en || row.nameEn || '',
     governorate: row.governorate || 'القاهرة / الجيزة',
     city: row.city || row.governorate || 'القاهرة',
     isActive: Boolean(row.is_active !== false)
@@ -126,29 +129,48 @@ function mapService(row: any): Service {
     id: row.id,
     categoryId: row.category_id || row.categoryId || '',
     nameAr: row.name_ar || row.nameAr || '',
+    nameEn: row.name_en || row.nameEn || '',
     description: row.description_ar || row.description || '',
+    basePrice: row.base_price !== undefined ? Number(row.base_price) : undefined,
+    priceType: row.price_type || undefined,
+    durationApprox: row.duration_approx || undefined,
     isActive: Boolean(row.is_active !== false)
   };
 }
 
+export function generateProviderSlug(businessName: string, id: string): string {
+  const clean = (businessName || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\u0621-\u064A0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  const idShort = id.replace(/^prov_/, '');
+  return clean ? `${clean}-${idShort}` : id;
+}
+
 function mapProvider(row: any, userDetails?: User): Provider {
   if (!row) return {} as Provider;
+  const businessName = row.business_name || row.businessName || '';
+  const slug = generateProviderSlug(businessName, row.id);
   return {
     id: row.id,
     userId: row.user_id || row.userId || '',
-    businessName: row.business_name || row.businessName || '',
+    businessName,
     bio: row.bio || '',
     experienceYears: Number(row.experience_years ?? row.experienceYears ?? 1),
     rating: Number(row.average_rating ?? row.rating ?? 5.0),
     reviewCount: Number(row.total_reviews ?? row.reviewCount ?? 0),
     isVerified: Boolean(row.is_verified ?? row.isVerified ?? false),
     isActive: Boolean(row.is_active !== false),
+    completedJobs: Number(row.completed_jobs ?? row.completedJobs ?? 0),
+    bankAccount: row.bank_account || row.bankAccount,
     categoryIds: Array.isArray(row.category_ids) ? row.category_ids : Array.isArray(row.categoryIds) ? row.categoryIds : [],
     serviceIds: Array.isArray(row.service_ids) ? row.service_ids : Array.isArray(row.serviceIds) ? row.serviceIds : [],
     areaIds: Array.isArray(row.area_ids) ? row.area_ids : Array.isArray(row.areaIds) ? row.areaIds : [],
     workingHours: row.working_hours || row.workingHours || { start: '09:00', end: '21:00', daysOff: ['الجمعة'] },
     workPhotos: row.work_photos || row.workPhotos || [],
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+    slug,
     user: userDetails
   };
 }
@@ -156,7 +178,7 @@ function mapProvider(row: any, userDetails?: User): Provider {
 function mapBooking(row: any): Booking {
   if (!row) return {} as Booking;
   const normalizedStatus = (row.status || 'PENDING').toString().toUpperCase() as BookingStatus;
-  return {
+  const booking: Booking = {
     id: row.id,
     bookingNumber: row.booking_number || row.bookingNumber || '',
     customerId: row.customer_id || row.customerId || '',
@@ -183,6 +205,33 @@ function mapBooking(row: any): Booking {
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
     updatedAt: row.updated_at || row.updatedAt || new Date().toISOString()
   };
+
+  // Hydrate Relations if present from joins
+  if (row.services) booking.service = mapService(row.services);
+  if (row.locations) booking.location = mapLocation(row.locations);
+  if (row.providers) {
+    booking.provider = {
+      businessName: row.providers.business_name || row.providers.businessName || '',
+      user: row.providers.users ? mapUser(row.providers.users) : undefined
+    };
+  }
+  if (row.customer_user) {
+    booking.customer = {
+      name: row.customer_user.name || 'عميل المنصة',
+      phone: row.customer_phone || row.customer_user.phone || '',
+      avatarUrl: row.customer_user.avatar_url,
+      user: mapUser(row.customer_user)
+    };
+  } else if (row.customers) {
+    booking.customer = {
+      name: row.customers.users?.name || 'عميل المنصة',
+      phone: row.customer_phone || row.customers.users?.phone || '',
+      avatarUrl: row.customers.users?.avatar_url,
+      user: row.customers.users ? mapUser(row.customers.users) : undefined
+    };
+  }
+
+  return booking;
 }
 
 function mapReview(row: any): Review {
@@ -195,9 +244,10 @@ function mapReview(row: any): Review {
     rating: Number(row.rating || 5),
     comment: row.comment || '',
     providerReply: row.provider_reply || row.providerReply,
+    repliedAt: row.replied_at || row.repliedAt,
     createdAt: row.created_at || row.createdAt || new Date().toISOString(),
-    customerName: row.customer_name || row.customerName || 'عميل',
-    customerAvatar: row.customer_avatar || row.customerAvatar
+    customerName: row.customer_name || row.customerName || 'عميل المنصة',
+    customerAvatar: row.customer_avatar || row.customerAvatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100'
   };
 }
 
@@ -605,6 +655,7 @@ export const api = {
     minRating?: number;
     verified?: boolean;
     activeOnly?: boolean;
+    isActive?: boolean;
   }): Promise<Provider[]> => {
     const categoryFilter = params?.categoryId || params?.category;
     const areaFilter = params?.areaId || params?.area;
@@ -620,7 +671,13 @@ export const api = {
       return fallbackRequest<Provider[]>(qs ? `/api/providers?${qs}` : '/api/providers');
     }
 
-    let query = supabase.from('providers').select('*, users(*)').eq('is_active', true);
+    let query = supabase.from('providers').select('*, users(*)');
+
+    if (params?.isActive !== undefined) {
+      query = query.eq('is_active', params.isActive);
+    } else if (params?.activeOnly !== false) {
+      query = query.eq('is_active', true);
+    }
 
     if (categoryFilter) {
       query = query.contains('category_ids', [categoryFilter]);
@@ -652,6 +709,12 @@ export const api = {
       );
     }
 
+    // Safety fallback: if minRating was specified but returned 0 results, query all active providers
+    if (providers.length === 0 && params?.minRating && !categoryFilter && !areaFilter && !searchFilter) {
+      const { data: allProvs } = await supabase.from('providers').select('*, users(*)').eq('is_active', true);
+      providers = (allProvs || []).map((row: any) => mapProvider(row, row.users ? mapUser(row.users) : undefined));
+    }
+
     return providers;
   },
 
@@ -660,11 +723,58 @@ export const api = {
     const { data, error } = await supabase.from('providers').select('*, users(*)').eq('id', id).single();
     if (error) throw new Error(error.message);
     const userDetails = data.users ? mapUser(data.users) : undefined;
-    return mapProvider(data, userDetails);
+    const provider = mapProvider(data, userDetails);
+
+    // Hydrate provider's services, areas, and reviews
+    const serviceIds = provider.serviceIds || [];
+    const areaIds = provider.areaIds || [];
+    const [srvRes, locRes, revRes] = await Promise.all([
+      serviceIds.length > 0 ? supabase.from('services').select('*').in('id', serviceIds) : Promise.resolve({ data: [] }),
+      areaIds.length > 0 ? supabase.from('locations').select('*').in('id', areaIds) : Promise.resolve({ data: [] }),
+      supabase.from('reviews').select('*').eq('provider_id', id).order('created_at', { ascending: false })
+    ]);
+
+    (provider as any).services = (srvRes.data || []).map(mapService);
+    (provider as any).areas = (locRes.data || []).map(mapLocation);
+    (provider as any).reviews = (revRes.data || []).map(mapReview);
+
+    return provider;
   },
 
   getProviderById: async (id: string): Promise<Provider> => {
     return api.getProvider(id);
+  },
+
+  getProviderBySlugOrId: async (slugOrId: string): Promise<Provider> => {
+    if (!slugOrId) throw new Error('معرف الفني مطلوب');
+    // If it's a direct ID, fetch directly
+    if (slugOrId.startsWith('prov_')) {
+      try {
+        return await api.getProvider(slugOrId);
+      } catch (e) {
+        // Fallback to searching
+      }
+    }
+    // Search across providers by slug or id or name
+    const all = await api.getProviders();
+    const match = all.find(p => p.id === slugOrId || p.slug === slugOrId || p.businessName.includes(slugOrId));
+    if (match) {
+      return api.getProvider(match.id);
+    }
+    return api.getProvider(slugOrId);
+  },
+
+  getAlternativeProviders: async (categoryId?: string, excludeProviderId?: string): Promise<Provider[]> => {
+    const all = await api.getProviders();
+    return all
+      .filter(p => {
+        if (excludeProviderId && p.id === excludeProviderId) return false;
+        if (categoryId && p.categoryIds && p.categoryIds.length > 0) {
+          return p.categoryIds.includes(categoryId);
+        }
+        return true;
+      })
+      .slice(0, 4);
   },
 
   updateProvider: async (id: string, data: Partial<Provider>): Promise<Provider> => {
@@ -686,6 +796,9 @@ export const api = {
     if (data.categoryIds !== undefined) updatePayload.category_ids = data.categoryIds;
     if (data.serviceIds !== undefined) updatePayload.service_ids = data.serviceIds;
     if (data.areaIds !== undefined) updatePayload.area_ids = data.areaIds;
+    if (data.workingHours !== undefined) updatePayload.working_hours = data.workingHours;
+    if (data.isActive !== undefined) updatePayload.is_active = data.isActive;
+    if ((data as any).avatarUrl !== undefined) updatePayload.avatar_url = (data as any).avatarUrl;
 
     const { data: updated, error } = await supabase
       .from('providers')
@@ -721,7 +834,7 @@ export const api = {
     preferredDate?: string;
     preferredTime?: string;
     problemDescription: string;
-    urgency?: 'normal' | 'urgent';
+    urgency?: 'normal' | 'urgent' | 'nearest';
     photoUrl?: string;
     lat?: number;
     lng?: number;
@@ -736,11 +849,87 @@ export const api = {
     const bookingId = 'bk_' + Math.random().toString(36).substring(2, 9);
     const bookingNumber = 'EG-' + Math.floor(100000 + Math.random() * 900000);
 
+    // Require real logged-in user authentication
+    const activeUserId = data.customerUserId || currentUserId;
+    if (!activeUserId) {
+      throw new Error('يجب تسجيل الدخول كعميل أولاً لتتمكن من إرسال طلب الحجز');
+    }
+
+    // Verify user exists in database
+    const { data: userRow, error: userErr } = await supabase
+      .from('users')
+      .select('id, name')
+      .eq('id', activeUserId)
+      .maybeSingle();
+
+    if (userErr || !userRow) {
+      throw new Error('حساب العميل غير مسجل في النظام. يرجى تسجيل الدخول أولاً');
+    }
+
+    // Resolve or establish customer profile for this verified user
+    let finalCustomerId = data.customerId;
+    if (!finalCustomerId) {
+      const { data: custRow } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('user_id', activeUserId)
+        .maybeSingle();
+
+      if (custRow?.id) {
+        finalCustomerId = custRow.id;
+      } else {
+        const newCustId = 'cust_' + Math.random().toString(36).substring(2, 9);
+        const { data: newCust, error: custErr } = await supabase
+          .from('customers')
+          .insert({
+            id: newCustId,
+            user_id: activeUserId,
+            created_at: new Date().toISOString()
+          })
+          .select('id')
+          .single();
+
+        if (custErr) throw new Error(`تعذر ربط سجل العميل: ${custErr.message}`);
+        finalCustomerId = newCust.id;
+      }
+    } else {
+      // Validate provided customerId actually exists
+      const { data: custCheck } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('id', finalCustomerId)
+        .maybeSingle();
+
+      if (!custCheck) {
+        const { data: custByUser } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('user_id', activeUserId)
+          .maybeSingle();
+
+        if (custByUser?.id) {
+          finalCustomerId = custByUser.id;
+        } else {
+          const newCustId = 'cust_' + Math.random().toString(36).substring(2, 9);
+          const { data: newCust } = await supabase
+            .from('customers')
+            .insert({
+              id: newCustId,
+              user_id: activeUserId,
+              created_at: new Date().toISOString()
+            })
+            .select('id')
+            .single();
+          finalCustomerId = newCust?.id || finalCustomerId;
+        }
+      }
+    }
+
     const bookingPayload = {
       id: bookingId,
       booking_number: bookingNumber,
-      customer_id: data.customerId || 'cust_direct',
-      customer_user_id: data.customerUserId || currentUserId || 'usr_guest',
+      customer_id: finalCustomerId,
+      customer_user_id: activeUserId,
       provider_id: data.providerId,
       service_id: data.serviceId,
       location_id: data.locationId,
@@ -758,21 +947,30 @@ export const api = {
       updated_at: new Date().toISOString()
     };
 
-    const { data: inserted, error } = await supabase.from('bookings').insert(bookingPayload).select('*').single();
+    const { data: inserted, error } = await supabase
+      .from('bookings')
+      .insert(bookingPayload)
+      .select('*, services(*), locations(*), providers(*, users(*)), customer_user:users!customer_user_id(*)')
+      .single();
+
     if (error) throw new Error(`فشل إنشاء الحجز: ${error.message}`);
 
     const { data: providerRow } = await supabase.from('providers').select('user_id').eq('id', data.providerId).maybeSingle();
     if (providerRow?.user_id) {
-      await supabase.from('notifications').insert({
-        id: 'notif_' + Math.random().toString(36).substring(2, 9),
-        user_id: providerRow.user_id,
-        title: 'طلب خدمة جديد',
-        message: `لديك طلب حجز جديد برقم ${bookingNumber}`,
-        type: 'booking_new',
-        link: '/provider-dashboard',
-        is_read: false,
-        created_at: new Date().toISOString()
-      });
+      try {
+        await supabase.from('notifications').insert({
+          id: 'notif_' + Math.random().toString(36).substring(2, 9),
+          user_id: providerRow.user_id,
+          title: 'طلب خدمة جديد',
+          message: `لديك طلب حجز جديد برقم ${bookingNumber}`,
+          type: 'booking_new',
+          link: '/provider-dashboard',
+          is_read: false,
+          created_at: new Date().toISOString()
+        });
+      } catch (err) {
+        console.warn('Failed to insert notification:', err);
+      }
     }
 
     return mapBooking(inserted);
@@ -787,7 +985,10 @@ export const api = {
       return fallbackRequest<Booking[]>(qs ? `/api/bookings?${qs}` : '/api/bookings');
     }
 
-    let query = supabase.from('bookings').select('*, services(*), locations(*)').order('created_at', { ascending: false });
+    let query = supabase
+      .from('bookings')
+      .select('*, services(*), locations(*), providers(*, users(*)), customer_user:users!customer_user_id(*)')
+      .order('created_at', { ascending: false });
 
     if (params?.status) {
       const sLower = params.status.toLowerCase();
@@ -813,22 +1014,19 @@ export const api = {
     const { data, error } = await query;
     if (error) throw new Error(error.message);
 
-    return (data || []).map((row: any) => {
-      const b = mapBooking(row);
-      if (row.services) b.service = mapService(row.services);
-      if (row.locations) b.location = mapLocation(row.locations);
-      return b;
-    });
+    return (data || []).map((row: any) => mapBooking(row));
   },
 
   getBooking: async (id: string): Promise<Booking> => {
     if (!supabase) return fallbackRequest<Booking>(`/api/bookings/${id}`);
-    const { data, error } = await supabase.from('bookings').select('*, services(*), locations(*)').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*, services(*), locations(*), providers(*, users(*)), customer_user:users!customer_user_id(*)')
+      .eq('id', id)
+      .single();
+
     if (error) throw new Error(error.message);
-    const b = mapBooking(data);
-    if (data.services) b.service = mapService(data.services);
-    if (data.locations) b.location = mapLocation(data.locations);
-    return b;
+    return mapBooking(data);
   },
 
   updateBookingStatus: async (
@@ -865,7 +1063,12 @@ export const api = {
       }
     }
 
-    const { data, error } = await supabase.from('bookings').update(updatePayload).eq('id', id).select('*').single();
+    const { data, error } = await supabase
+      .from('bookings')
+      .update(updatePayload)
+      .eq('id', id)
+      .select('*, services(*), locations(*), providers(*, users(*)), customer_user:users!customer_user_id(*)')
+      .single();
     if (error) throw new Error(error.message);
 
     if (data.customer_user_id) {
@@ -893,17 +1096,17 @@ export const api = {
       });
     }
 
-    const commissionRate = 0.10;
-    const commissionAmount = Math.round(data.finalPrice * commissionRate);
-    const providerEarnings = data.finalPrice - commissionAmount;
+    const commissionRate = 0;
+    const commissionAmount = 0;
+    const providerEarnings = data.finalPrice;
 
     const { data: updatedBooking, error: bookingErr } = await supabase
       .from('bookings')
       .update({
         status: 'COMPLETED',
         final_price: data.finalPrice,
-        commission_amount: commissionAmount,
-        provider_earnings: providerEarnings,
+        commission_amount: 0,
+        provider_earnings: data.finalPrice,
         updated_at: new Date().toISOString()
       })
       .eq('id', id)
@@ -918,26 +1121,34 @@ export const api = {
       booking_id: id,
       provider_id: updatedBooking.provider_id,
       booking_amount: data.finalPrice,
-      commission_rate: commissionRate,
-      commission_amount: commissionAmount,
-      provider_earnings: providerEarnings,
-      status: 'pending',
+      commission_rate: 0,
+      commission_amount: 0,
+      provider_earnings: data.finalPrice,
+      status: 'waived',
       created_at: new Date().toISOString()
     };
 
-    await supabase.from('commissions').insert(commPayload);
+    try {
+      await supabase.from('commissions').insert(commPayload);
+    } catch (e) {
+      console.warn('Commission record notice:', e);
+    }
 
     if (updatedBooking.customer_user_id) {
-      await supabase.from('notifications').insert({
-        id: 'notif_' + Math.random().toString(36).substring(2, 9),
-        user_id: updatedBooking.customer_user_id,
-        title: 'اكتملت الخدمة بنجاح',
-        message: `تم إكمال الخدمة بمبلغ ${data.finalPrice} ج.م. شاركنا برأيك وقيم الفني الآن!`,
-        type: 'booking_status',
-        link: '/customer-dashboard',
-        is_read: false,
-        created_at: new Date().toISOString()
-      });
+      try {
+        await supabase.from('notifications').insert({
+          id: 'notif_' + Math.random().toString(36).substring(2, 9),
+          user_id: updatedBooking.customer_user_id,
+          title: 'اكتملت الخدمة بنجاح',
+          message: `تم إكمال الخدمة بمبلغ ${data.finalPrice} ج.م. شاركنا برأيك وقيم الفني الآن!`,
+          type: 'booking_status',
+          link: '/customer-dashboard',
+          is_read: false,
+          created_at: new Date().toISOString()
+        });
+      } catch (e) {
+        console.warn('Completion notification notice:', e);
+      }
     }
 
     return {
@@ -971,9 +1182,11 @@ export const api = {
     if (!booking) throw new Error('الحجز غير موجود');
 
     let customerName = 'عميل المنصة';
+    let customerAvatar: string | undefined = undefined;
     if (booking.customer_user_id) {
-      const { data: u } = await supabase.from('users').select('name').eq('id', booking.customer_user_id).maybeSingle();
+      const { data: u } = await supabase.from('users').select('name, avatar_url').eq('id', booking.customer_user_id).maybeSingle();
       if (u?.name) customerName = u.name;
+      if (u?.avatar_url) customerAvatar = u.avatar_url;
     }
 
     const reviewId = 'rev_' + Math.random().toString(36).substring(2, 9);
@@ -982,6 +1195,7 @@ export const api = {
       booking_id: data.bookingId,
       customer_id: booking.customer_id,
       customer_name: customerName,
+      customer_avatar: customerAvatar || null,
       provider_id: booking.provider_id,
       rating: data.rating,
       comment: data.comment,
@@ -1184,18 +1398,30 @@ export const api = {
   getPlatformStats: async (): Promise<PlatformStats> => {
     if (!supabase) return fallbackRequest<PlatformStats>('/api/admin/stats');
 
-    const [{ count: customersCount }, { count: providersCount }, { count: bookingsCount }, { data: bookingsData }] = await Promise.all([
+    const [
+      { count: customersCount },
+      { count: providersCount },
+      { count: bookingsCount },
+      { data: bookingsData },
+      { data: reviewsData }
+    ] = await Promise.all([
       supabase.from('customers').select('*', { count: 'exact', head: true }),
       supabase.from('providers').select('*', { count: 'exact', head: true }),
       supabase.from('bookings').select('*', { count: 'exact', head: true }),
-      supabase.from('bookings').select('status, final_price, commission_amount, provider_earnings')
+      supabase.from('bookings').select('status, final_price, commission_amount, provider_earnings'),
+      supabase.from('reviews').select('rating')
     ]);
 
-    const completed = (bookingsData || []).filter(b => b.status === 'COMPLETED');
-    const pending = (bookingsData || []).filter(b => b.status === 'PENDING');
+    const completed = (bookingsData || []).filter(b => (b.status || '').toString().toUpperCase() === 'COMPLETED');
+    const pending = (bookingsData || []).filter(b => (b.status || '').toString().toUpperCase() === 'PENDING');
     const totalRevenue = completed.reduce((sum, b) => sum + (Number(b.final_price) || 0), 0);
     const totalCommission = completed.reduce((sum, b) => sum + (Number(b.commission_amount) || 0), 0);
     const totalEarnings = completed.reduce((sum, b) => sum + (Number(b.provider_earnings) || 0), 0);
+
+    const totalReviews = reviewsData?.length || 0;
+    const averageRating = totalReviews > 0
+      ? Number(((reviewsData || []).reduce((acc, r) => acc + (Number(r.rating) || 5), 0) / totalReviews).toFixed(2))
+      : 5.0;
 
     return {
       totalCustomers: customersCount || 0,
@@ -1207,8 +1433,8 @@ export const api = {
       totalRevenueVolume: totalRevenue,
       totalPlatformCommission: totalCommission,
       totalProviderEarnings: totalEarnings,
-      averageRating: 4.88,
-      totalReviews: 80
+      averageRating,
+      totalReviews
     };
   },
 
@@ -1224,6 +1450,134 @@ export const api = {
     const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return (data || []).map(mapUser);
+  },
+
+  submitDispute: async (data: {
+    bookingId: string;
+    bookingNumber?: string;
+    userId: string;
+    userName?: string;
+    userPhone?: string;
+    userRole: 'customer' | 'provider';
+    providerId: string;
+    providerName?: string;
+    reasonCategory: string;
+    details: string;
+    photoUrl?: string;
+  }): Promise<Dispute> => {
+    const disputeId = 'disp_' + Math.random().toString(36).substring(2, 9);
+    const dispute: Dispute = {
+      id: disputeId,
+      bookingId: data.bookingId,
+      bookingNumber: data.bookingNumber || '',
+      userId: data.userId,
+      userName: data.userName || 'مستخدم المنصة',
+      userPhone: data.userPhone || '',
+      userRole: data.userRole,
+      providerId: data.providerId,
+      providerName: data.providerName || 'مقدم الخدمة',
+      reasonCategory: data.reasonCategory,
+      details: data.details,
+      photoUrl: data.photoUrl,
+      status: 'pending',
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      const stored = localStorage.getItem('zahraa_disputes');
+      const list: Dispute[] = stored ? JSON.parse(stored) : [];
+      list.unshift(dispute);
+      localStorage.setItem('zahraa_disputes', JSON.stringify(list));
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+
+    try {
+      if (supabase) {
+        const { data: adminUser } = await supabase.from('users').select('id').eq('role', 'admin').limit(1).maybeSingle();
+        if (adminUser?.id) {
+          await supabase.from('notifications').insert({
+            id: 'notif_' + Math.random().toString(36).substring(2, 9),
+            user_id: adminUser.id,
+            title: 'بلاغ نزاع جديد في منصة زهراء',
+            message: `تم تقديم بلاغ نزاع على الطلب ${data.bookingNumber || data.bookingId}: ${data.reasonCategory}`,
+            type: 'system',
+            link: '/admin-dashboard',
+            is_read: false,
+            created_at: new Date().toISOString()
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Dispute notification error:', e);
+    }
+
+    return dispute;
+  },
+
+  getDisputes: async (): Promise<Dispute[]> => {
+    try {
+      const stored = localStorage.getItem('zahraa_disputes');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn('LocalStorage error:', e);
+    }
+    const defaultDisputes: Dispute[] = [
+      {
+        id: 'disp_init_1',
+        bookingId: 'bk_demo_1',
+        bookingNumber: 'EG-402910',
+        userId: 'usr_customer1',
+        userName: 'أحمد محمود العميل',
+        userPhone: '01012345678',
+        userRole: 'customer',
+        providerId: 'prov_1',
+        providerName: 'م/ إبراهيم حسن (صيانة وتركيبات التكييف)',
+        reasonCategory: 'عدم الالتزام بالموعد المحدد',
+        details: 'تم الاتفاق على الحضور الساعة 2 ظهراً ولم يحضر الفني ولم يرد على الهاتف بعد قبول الطلب ثم تم إلغاء الزيارة.',
+        status: 'pending',
+        createdAt: new Date(Date.now() - 3600000 * 5).toISOString()
+      },
+      {
+        id: 'disp_init_2',
+        bookingId: 'bk_demo_2',
+        bookingNumber: 'EG-784119',
+        userId: 'usr_customer2',
+        userName: 'سارة خالد',
+        userPhone: '01198765432',
+        userRole: 'customer',
+        providerId: 'prov_2',
+        providerName: 'أ/ محمد طارق (سباكة متكاملة)',
+        reasonCategory: 'طلب مبالغ إضافية غير متفق عليها',
+        details: 'طلب الفني مبلغاً إضافياً كبيراً بحجة مصاريف انتقال لم تكن مذكورة مسبقاً، وبعد الاعتراض ألغى الموعد.',
+        status: 'in_review',
+        createdAt: new Date(Date.now() - 3600000 * 24).toISOString()
+      }
+    ];
+    try {
+      localStorage.setItem('zahraa_disputes', JSON.stringify(defaultDisputes));
+    } catch (e) {}
+    return defaultDisputes;
+  },
+
+  updateDisputeStatus: async (id: string, status: 'pending' | 'in_review' | 'resolved' | 'dismissed', adminNotes?: string): Promise<Dispute | null> => {
+    try {
+      const stored = localStorage.getItem('zahraa_disputes');
+      let list: Dispute[] = stored ? JSON.parse(stored) : [];
+      const index = list.findIndex(d => d.id === id);
+      if (index !== -1) {
+        list[index].status = status;
+        if (adminNotes !== undefined) list[index].adminNotes = adminNotes;
+        if (status === 'resolved') list[index].resolvedAt = new Date().toISOString();
+        localStorage.setItem('zahraa_disputes', JSON.stringify(list));
+        return list[index];
+      }
+    } catch (e) {
+      console.warn('Dispute update error:', e);
+    }
+    return null;
   },
 
   resetDemoData: async () => {

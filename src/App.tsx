@@ -4,11 +4,22 @@
  */
 
 import React, { useState } from 'react';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useNavigate,
+  useLocation,
+  useParams,
+  useSearchParams,
+  Navigate
+} from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
 import { Header } from './components/Header.js';
 import { Footer } from './components/Footer.js';
 import { NotificationsModal } from './components/NotificationsModal.js';
 import { AuthModal } from './components/AuthModal.js';
+import { OnboardingTour } from './components/OnboardingTour.js';
 
 import { HomeView } from './views/HomeView.js';
 import { ProvidersListingView } from './views/ProvidersListingView.js';
@@ -17,134 +28,212 @@ import { CustomerDashboardView } from './views/CustomerDashboardView.js';
 import { ProviderDashboardView } from './views/ProviderDashboardView.js';
 import { AdminDashboardView } from './views/AdminDashboardView.js';
 
+function ProviderProfileRouteWrapper({ onBookingSuccess }: { onBookingSuccess: (booking: any) => void }) {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  if (!id) {
+    return <Navigate to="/providers" replace />;
+  }
+
+  return (
+    <ProviderProfileView
+      providerId={id}
+      onBack={() => navigate('/providers')}
+      onBookingSuccess={onBookingSuccess}
+    />
+  );
+}
+
+function ProvidersListingRouteWrapper({ onSelectProvider }: { onSelectProvider: (id: string) => void }) {
+  const [searchParams] = useSearchParams();
+  const initialCat = searchParams.get('cat') || '';
+  const initialArea = searchParams.get('area') || '';
+  const initialQ = searchParams.get('q') || '';
+
+  return (
+    <ProvidersListingView
+      initialCategoryId={initialCat}
+      initialAreaId={initialArea}
+      initialSearchTerm={initialQ}
+      onSelectProvider={onSelectProvider}
+    />
+  );
+}
+
 function MainApp() {
   const { user } = useAuth();
-
-  // Navigation State
-  const [activeView, setActiveView] = useState<string>('home');
-  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
-  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Modals state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
 
+  // Compute activeView from current pathname
+  const getActiveView = () => {
+    const path = location.pathname;
+    if (path === '/') return 'home';
+    if (path.startsWith('/provider/')) return 'provider-profile';
+    if (path === '/providers') return 'providers';
+    if (path === '/customer') return 'customer-dashboard';
+    if (path === '/provider-dashboard') return 'provider-dashboard';
+    if (path === '/admin') return 'admin-dashboard';
+    return 'home';
+  };
+
+  const activeView = getActiveView();
+
   const handleNavigate = (view: string, params?: any) => {
-    setActiveView(view);
-    if (params) {
-      if (params.providerId) setSelectedProviderId(params.providerId);
-      if (params.categoryId) setSelectedCategoryId(params.categoryId);
-      if (params.areaId) setSelectedAreaId(params.areaId);
-      if (params.q) setSearchTerm(params.q);
+    if (params?.providerId) {
+      navigate(`/provider/${encodeURIComponent(params.providerId)}`);
+    } else if (params?.categoryId || params?.areaId || params?.q) {
+      const query = new URLSearchParams();
+      if (params.categoryId) query.set('cat', params.categoryId);
+      if (params.areaId) query.set('area', params.areaId);
+      if (params.q) query.set('q', params.q);
+      navigate(`/providers?${query.toString()}`);
+    } else {
+      switch (view) {
+        case 'home':
+          navigate('/');
+          break;
+        case 'providers':
+          navigate('/providers');
+          break;
+        case 'customer-dashboard':
+          navigate('/customer');
+          break;
+        case 'provider-dashboard':
+          navigate('/provider-dashboard');
+          break;
+        case 'admin-dashboard':
+          navigate('/admin');
+          break;
+        default:
+          navigate('/');
+      }
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSelectCategory = (categoryId: string) => {
-    setSelectedCategoryId(categoryId);
-    setSelectedAreaId('');
-    setSearchTerm('');
-    setActiveView('providers');
+    navigate(`/providers?cat=${encodeURIComponent(categoryId)}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleSelectProvider = (providerId: string) => {
-    setSelectedProviderId(providerId);
-    setActiveView('provider-profile');
+  const handleSelectProvider = (providerIdOrSlug: string) => {
+    navigate(`/provider/${encodeURIComponent(providerIdOrSlug)}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSearch = (term: string, areaId: string) => {
-    setSearchTerm(term);
-    setSelectedAreaId(areaId);
-    setSelectedCategoryId('');
-    setActiveView('providers');
+    const query = new URLSearchParams();
+    if (term) query.set('q', term);
+    if (areaId) query.set('area', areaId);
+    navigate(`/providers?${query.toString()}`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBookingSuccess = (newBooking: any) => {
-    setSuccessBanner(`تم إرسال طلب الحجز بنجاح برقم (${newBooking.bookingNumber}) وسيصلك إشعار فور مراجعة الفني.`);
+    setSuccessBanner(`تم إرسال طلب الخدمة رقم #${newBooking.bookingNumber} بنجاح. سيقوم الفني بمراجعته والتواصل معك.`);
     setTimeout(() => {
       setSuccessBanner(null);
     }, 8000);
-    setActiveView('customer-dashboard');
+    navigate('/customer');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-amber-400 selection:text-slate-950" dir="rtl">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-emerald-600 selection:text-white" dir="rtl">
       {/* Header */}
       <Header
         activeView={activeView}
         onNavigate={handleNavigate}
         onOpenAuthModal={() => setIsAuthModalOpen(true)}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
+        onOpenOnboarding={() => {
+          // Handled via Context triggerTour
+        }}
       />
 
       {/* Success Banner Alert */}
       {successBanner && (
-        <div className="bg-emerald-600 text-white text-xs sm:text-sm font-bold py-2.5 px-4 text-center sticky top-28 z-30 shadow-md flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2">
-          <span>✅</span>
+        <div className="bg-emerald-600 text-white text-xs sm:text-sm font-bold py-3 px-4 text-center sticky top-16 sm:top-18 z-30 shadow-md flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2">
+          <span>✨</span>
           <span>{successBanner}</span>
           <button
             type="button"
             onClick={() => setSuccessBanner(null)}
-            className="mr-3 text-white/80 hover:text-white underline text-xs"
+            className="mr-3 text-emerald-100 hover:text-white underline text-xs cursor-pointer"
           >
             إغلاق
           </button>
         </div>
       )}
 
-      {/* Main Content Area */}
+      {/* Main Content with React Router Routes */}
       <main className="flex-1">
-        {activeView === 'home' && (
-          <HomeView
-            onSelectCategory={handleSelectCategory}
-            onSelectProvider={handleSelectProvider}
-            onSearch={handleSearch}
-            onNavigate={handleNavigate}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <HomeView
+                onSelectCategory={handleSelectCategory}
+                onSelectProvider={handleSelectProvider}
+                onSearch={handleSearch}
+                onNavigate={handleNavigate}
+              />
+            }
           />
-        )}
 
-        {activeView === 'providers' && (
-          <ProvidersListingView
-            initialCategoryId={selectedCategoryId}
-            initialAreaId={selectedAreaId}
-            initialSearchTerm={searchTerm}
-            onSelectProvider={handleSelectProvider}
+          <Route
+            path="/providers"
+            element={
+              <ProvidersListingRouteWrapper
+                onSelectProvider={handleSelectProvider}
+              />
+            }
           />
-        )}
 
-        {activeView === 'provider-profile' && selectedProviderId && (
-          <ProviderProfileView
-            providerId={selectedProviderId}
-            onBack={() => setActiveView('providers')}
-            onBookingSuccess={handleBookingSuccess}
+          <Route
+            path="/provider/:id"
+            element={
+              <ProviderProfileRouteWrapper
+                onBookingSuccess={handleBookingSuccess}
+              />
+            }
           />
-        )}
 
-        {activeView === 'customer-dashboard' && (
-          <CustomerDashboardView
-            onNavigateToProvider={handleSelectProvider}
+          <Route
+            path="/customer"
+            element={
+              <CustomerDashboardView
+                onNavigateToProvider={handleSelectProvider}
+              />
+            }
           />
-        )}
 
-        {activeView === 'provider-dashboard' && (
-          <ProviderDashboardView />
-        )}
+          <Route
+            path="/provider-dashboard"
+            element={<ProviderDashboardView />}
+          />
 
-        {activeView === 'admin-dashboard' && (
-          <AdminDashboardView />
-        )}
+          <Route
+            path="/admin"
+            element={<AdminDashboardView />}
+          />
+
+          {/* Catch-all redirect to Home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
 
       {/* Footer */}
       <Footer onNavigate={handleNavigate} />
 
-      {/* Modals */}
+      {/* Modals & Tours */}
       <NotificationsModal
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}
@@ -155,14 +244,19 @@ function MainApp() {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
       />
+
+      {/* Role-based Onboarding Tour: Shows ONLY after first signup / registration */}
+      <OnboardingTour />
     </div>
   );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <MainApp />
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <MainApp />
+      </AuthProvider>
+    </BrowserRouter>
   );
 }

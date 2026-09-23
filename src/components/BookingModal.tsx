@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, AlertTriangle, CheckCircle2, ShieldCheck, MapPin, Phone, FileText, Image as ImageIcon } from 'lucide-react';
+import {
+  X,
+  Calendar,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  MapPin,
+  Phone,
+  FileText,
+  Sparkles,
+  Zap,
+  ArrowLeft
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { api } from '../lib/api.js';
-import { LocationMap, Coordinates } from './LocationMap.js';
 import type { Provider, Service, Location } from '../types.js';
 
 interface Props {
@@ -19,25 +30,38 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
   const [services, setServices] = useState<Service[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
 
-  const [serviceId, setServiceId] = useState(initialServiceId || '');
+  // Form state
+  const [selectedServiceId, setSelectedServiceId] = useState(initialServiceId || '');
+  const [customServiceName, setCustomServiceName] = useState('');
   const [problemDescription, setProblemDescription] = useState('');
-  const [customerPhone, setCustomerPhone] = useState(user?.phone || '01123456789');
+  const [customerPhone, setCustomerPhone] = useState(user?.phone || '');
   const [locationId, setLocationId] = useState('');
-  const [addressDetails, setAddressDetails] = useState(customer?.address || 'شارع التحرير، برج الأطباء، الدور الرابع');
-  const [coordinates, setCoordinates] = useState<Coordinates | null>(null);
+  const [addressDetails, setAddressDetails] = useState(customer?.address || '');
   const [preferredDate, setPreferredDate] = useState('');
   const [preferredTime, setPreferredTime] = useState('صباحاً (10 - 2)');
-  const [urgency, setUrgency] = useState<'normal' | 'urgent' | 'nearest'>('normal');
-  const [photoUrl, setPhotoUrl] = useState('');
+  const [urgency, setUrgency] = useState<'normal' | 'urgent'>('normal');
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load services and locations filtered automatically by provider specialization
+  // Sync phone & address from Auth
+  useEffect(() => {
+    if (user?.phone && !customerPhone) {
+      setCustomerPhone(user.phone);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (customer?.address && !addressDetails) {
+      setAddressDetails(customer.address);
+    }
+  }, [customer]);
+
+  // Load services and locations for this provider
   useEffect(() => {
     if (!isOpen) return;
 
     let isMounted = true;
-
     const loadData = async () => {
       try {
         const [allServices, allLocations] = await Promise.all([
@@ -47,55 +71,53 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
 
         if (!isMounted) return;
 
-        // Automatically filter services based on provider specialization (categoryIds / serviceIds)
-        let filteredServices = (allServices || []).filter(srv => {
-          const matchesService = Array.isArray(provider.serviceIds) && provider.serviceIds.length > 0 && provider.serviceIds.includes(srv.id);
-          const matchesCategory = Array.isArray(provider.categoryIds) && provider.categoryIds.length > 0 && provider.categoryIds.includes(srv.categoryId);
-          return matchesService || matchesCategory;
+        // Filter services for provider
+        let provServices = (allServices || []).filter(srv => {
+          const inServiceIds = Array.isArray(provider.serviceIds) && provider.serviceIds.includes(srv.id);
+          const inCategoryIds = Array.isArray(provider.categoryIds) && provider.categoryIds.includes(srv.categoryId);
+          return inServiceIds || inCategoryIds;
         });
 
-        // Fallback to provider.services if present
-        if (filteredServices.length === 0 && provider.services && provider.services.length > 0) {
-          filteredServices = provider.services;
+        if (provServices.length === 0 && provider.services && provider.services.length > 0) {
+          provServices = provider.services;
         }
 
-        // Safety fallback: if ID mismatch or no services matched, show available services so the user is never blocked
-        if (filteredServices.length === 0) {
-          filteredServices = allServices || [];
+        if (provServices.length === 0) {
+          provServices = allServices || [];
         }
 
-        setServices(filteredServices);
+        setServices(provServices);
 
-        // Filter locations based on provider areaIds
-        let providerLocations = (allLocations || []).filter(loc =>
+        // Filter locations for provider
+        let provLocations = (allLocations || []).filter(loc =>
           Array.isArray(provider.areaIds) && provider.areaIds.length > 0 ? provider.areaIds.includes(loc.id) : true
         );
-        if (providerLocations.length === 0 && provider.areas && provider.areas.length > 0) {
-          providerLocations = provider.areas;
+        if (provLocations.length === 0 && provider.areas && provider.areas.length > 0) {
+          provLocations = provider.areas;
         }
-        if (providerLocations.length === 0) {
-          providerLocations = allLocations || [];
+        if (provLocations.length === 0) {
+          provLocations = allLocations || [];
         }
-        setLocations(providerLocations);
+        setLocations(provLocations);
 
-        // Select initial service
-        if (initialServiceId && filteredServices.some(s => s.id === initialServiceId)) {
-          setServiceId(initialServiceId);
-        } else if (filteredServices.length > 0) {
-          setServiceId(filteredServices[0].id);
+        // Set default selection
+        if (initialServiceId && provServices.some(s => s.id === initialServiceId)) {
+          setSelectedServiceId(initialServiceId);
+        } else if (provServices.length > 0) {
+          setSelectedServiceId(provServices[0].id);
+        } else {
+          setSelectedServiceId('other');
         }
 
-        // Select initial location
-        if (providerLocations.length > 0) {
-          setLocationId(providerLocations[0].id);
+        if (provLocations.length > 0) {
+          setLocationId(provLocations[0].id);
         }
       } catch (err) {
-        console.error('Error loading booking modal options:', err);
+        console.error('Error loading booking options:', err);
       }
     };
 
     loadData();
-
     return () => {
       isMounted = false;
     };
@@ -103,315 +125,280 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
 
   if (!isOpen) return null;
 
-  const selectedLocation = locations.find(loc => loc.id === locationId) || provider.areas?.find(loc => loc.id === locationId);
+  const isOther = selectedServiceId === 'other';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!serviceId) {
-      setError('يرجى اختيار الخدمة المطلوبة');
+    if (!user || !user.id) {
+      setError('يجب تسجيل الدخول كعميل أولاً لتتمكن من إرسال طلب الحجز');
+      return;
+    }
+
+    if (!selectedServiceId) {
+      setError('يرجى اختيار الخدمة المطلوبة أو تحديد "أخرى"');
+      return;
+    }
+
+    if (isOther && !customServiceName.trim() && !problemDescription.trim()) {
+      setError('يرجى كتابة نوع الخدمة أو وصف المطلوب');
       return;
     }
 
     if (!problemDescription.trim()) {
-      setError('يرجى كتابة وصف مختصر للمشكلة أو العطل');
+      setError('يرجى كتابة تفاصيل المشكلة أو الطلب');
       return;
     }
 
     if (!customerPhone.trim()) {
-      setError('يرجى إدخال رقم الهاتف للتواصل');
+      setError('يرجى كتابة رقم الهاتف للتواصل');
       return;
     }
 
     if (!addressDetails.trim()) {
-      setError('يرجى إدخال تفاصيل العنوان للزيارة');
+      setError('يرجى كتابة تفاصيل العنوان للزيارة');
       return;
     }
+
+    const effectiveLocationId = locationId || locations[0]?.id || provider.areaIds?.[0] || 'loc_1';
+
+    const effectiveServiceId = isOther
+      ? (services[0]?.id || 'srv_general')
+      : selectedServiceId;
+
+    const fullDescription = isOther && customServiceName.trim()
+      ? `[خدمة مخصصة: ${customServiceName.trim()}] - ${problemDescription.trim()}`
+      : problemDescription.trim();
 
     setLoading(true);
     try {
       const newBooking = await api.createBooking({
-        customerId: customer?.id || 'cust_temp',
-        customerUserId: user?.id || 'usr_customer1',
+        customerId: customer?.id,
+        customerUserId: user.id,
         providerId: provider.id,
-        serviceId,
-        locationId: locationId || locations[0]?.id || provider.areaIds?.[0] || 'loc_mohandessin',
-        problemDescription,
-        customerPhone,
-        addressDetails,
-        preferredDate: urgency === 'nearest' ? 'أقرب موعد متاح' : preferredDate,
-        preferredTime: urgency === 'nearest' ? 'طوارئ فوري' : preferredTime,
-        urgency,
-        photoUrl: photoUrl || undefined,
-        lat: coordinates?.lat,
-        lng: coordinates?.lng
+        serviceId: effectiveServiceId,
+        locationId: effectiveLocationId,
+        problemDescription: fullDescription,
+        customerPhone: customerPhone.trim(),
+        addressDetails: addressDetails.trim(),
+        preferredDate: preferredDate || new Date().toISOString().split('T')[0],
+        preferredTime,
+        urgency
       });
 
       onBookingCreated(newBooking);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'حدث خطأ أثناء إرسال طلب الحجز');
+      console.error('Booking submission error:', err);
+      setError(err.message || 'حدث خطأ أثناء حفظ طلب الحجز، يرجى المحاولة مرة أخرى');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-      <div
-        className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200"
-        dir="rtl"
-      >
-        {/* Modal Header */}
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 font-black flex items-center justify-center text-base">
-              حجز
-            </div>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white w-full max-w-xl rounded-t-3xl sm:rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.25)] border border-slate-100 overflow-hidden flex flex-col max-h-[92vh] animate-in slide-in-from-bottom duration-300">
+        
+        {/* Mobile Drag Indicator Handle */}
+        <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0" />
+
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img
+              src={provider.user?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
+              alt={provider.businessName}
+              className="w-10 h-10 rounded-2xl object-cover border border-slate-200 shadow-xs"
+            />
             <div>
-              <h3 className="font-bold text-base text-slate-900">
-                طلب حجز خدمة مع {provider.businessName}
+              <h3 className="text-base font-black text-slate-900 leading-tight">
+                طلب خدمة من {provider.businessName}
               </h3>
-              <p className="text-xs text-slate-500">
-                خبرة {provider.experienceYears} سنوات | تقييم {provider.rating} ⭐
+              <p className="text-xs text-slate-500 mt-0.5">
+                منصة خلصلى · حجز فوري بدون وسيط أو عمولة
               </p>
             </div>
           </div>
+
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200/60"
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 overflow-y-auto flex-1 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 space-y-4 text-right">
+          {!user && (
+            <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start gap-2.5">
+              <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+              <div className="text-xs leading-relaxed">
+                <p className="font-bold mb-0.5">تسجيل الدخول مطلوب</p>
+                <p>يجب تسجيل الدخول كعميل لتتمكن من إرسال الطلب ومتابعته عبر خلصلى.</p>
+              </div>
+            </div>
+          )}
+
           {error && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+            <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
               {error}
             </div>
           )}
 
-          {/* Mandatory Business Notice Requirement */}
-          <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-xs leading-relaxed">
-              <p className="font-bold mb-0.5">تنبيه هام حول السعر والاتفاق:</p>
-              <p className="text-amber-900 font-semibold">
-                "السعر يتم الاتفاق عليه مع مقدم الخدمة، والمنصة لا تحدد سعر الخدمة."
-              </p>
-            </div>
-          </div>
-
-          {/* Service Selector (Filtered automatically by provider's specialization) */}
-          <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1.5">الخدمة المطلوبة *</label>
+          {/* Service Selector */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700 block">
+              الخدمة المطلوبة: <span className="text-rose-500">*</span>
+            </label>
             <select
-              value={serviceId}
-              onChange={e => setServiceId(e.target.value)}
-              required
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 bg-white"
+              value={selectedServiceId}
+              onChange={e => setSelectedServiceId(e.target.value)}
+              className="w-full h-12 px-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-semibold transition-all outline-none"
             >
-              <option value="" disabled>-- اختر الخدمة --</option>
-              {services.map(srv => (
-                <option key={srv.id} value={srv.id}>
-                  {srv.nameAr}
+              {services.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.nameAr}
                 </option>
               ))}
+              <option value="other" className="font-bold text-slate-900">
+                ✦ أخرى (خدمة أو صيانة مخصصة)
+              </option>
             </select>
           </div>
 
-          {/* Problem description */}
-          <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1.5">
-              وصف المشكلة أو تفاصيل الطلب *
-            </label>
-            <textarea
-              required
-              rows={3}
-              value={problemDescription}
-              onChange={e => setProblemDescription(e.target.value)}
-              placeholder="صف المشكلة بدقة (مثال: تسريب مياه من خلاط المطبخ أو قفلة كهرباء في الصالة، وتوضيح الأدوات المطلوبة إن وجدت)..."
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 text-right leading-relaxed"
-            />
-          </div>
-
-          {/* Urgency Option */}
-          <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1.5">سرعة الاستجابة المطلوبة</label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setUrgency('normal')}
-                className={`py-2 px-2 text-xs font-bold rounded-xl border transition-all text-center ${
-                  urgency === 'normal'
-                    ? 'border-amber-500 bg-amber-50 text-amber-950 ring-2 ring-amber-500/20'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                عادي (حسب التنسيق)
-              </button>
-              <button
-                type="button"
-                onClick={() => setUrgency('urgent')}
-                className={`py-2 px-2 text-xs font-bold rounded-xl border transition-all text-center ${
-                  urgency === 'urgent'
-                    ? 'border-amber-500 bg-amber-50 text-amber-950 ring-2 ring-amber-500/20'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                عاجل (خلال ساعات)
-              </button>
-              <button
-                type="button"
-                onClick={() => setUrgency('nearest')}
-                className={`py-2 px-2 text-xs font-bold rounded-xl border transition-all text-center ${
-                  urgency === 'nearest'
-                    ? 'border-amber-500 bg-amber-50 text-amber-950 ring-2 ring-amber-500/20'
-                    : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                ⚡ أقرب موعد متاح
-              </button>
-            </div>
-          </div>
-
-          {/* Timing options (if not urgent nearest) */}
-          {urgency !== 'nearest' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
-                  تاريخ الزيارة المفضل (اختياري)
-                </label>
-                <input
-                  type="date"
-                  value={preferredDate}
-                  onChange={e => setPreferredDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1">
-                  الوقت المفضل (اختياري)
-                </label>
-                <select
-                  value={preferredTime}
-                  onChange={e => setPreferredTime(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 bg-white"
-                >
-                  <option value="صباحاً (10 - 2)">صباحاً (10:00 ص - 2:00 م)</option>
-                  <option value="عصراً (2 - 5)">عصراً (2:00 م - 5:00 م)</option>
-                  <option value="مساءً (5 - 9)">مساءً (5:00 م - 9:00 م)</option>
-                </select>
-              </div>
+          {/* Custom service name */}
+          {isOther && (
+            <div className="space-y-1.5 animate-in fade-in duration-150">
+              <label className="text-xs font-bold text-slate-700 block">
+                حدد الخدمة أو المشكلة المخصصة:
+              </label>
+              <input
+                type="text"
+                value={customServiceName}
+                onChange={e => setCustomServiceName(e.target.value)}
+                placeholder="مثال: تركيب إضاءة مخفية، صيانة مضخة مياه..."
+                className="w-full h-12 px-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-medium transition-all outline-none"
+              />
             </div>
           )}
 
-          {/* Contact phone & area */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">رقم الهاتف للتواصل *</label>
-              <div className="relative">
-                <input
-                  type="tel"
-                  required
-                  value={customerPhone}
-                  onChange={e => setCustomerPhone(e.target.value)}
-                  placeholder="01012345678"
-                  className="w-full pl-3 pr-8 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 text-right"
-                />
-                <Phone className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-3" />
-              </div>
+          {/* Problem Description */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700 block">
+              تفاصيل العطل أو الطلب: <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              value={problemDescription}
+              onChange={e => setProblemDescription(e.target.value)}
+              rows={3}
+              placeholder="اكتب وصفاً موجزاً للمشكلة لمساعدة الفني في إحضار القطع والمعدات المناسبة..."
+              className="w-full p-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-medium transition-all outline-none resize-none"
+            />
+          </div>
+
+          {/* Auto-filled Phone & Area */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">
+                رقم هاتفك للتواصل: <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="tel"
+                value={customerPhone}
+                onChange={e => setCustomerPhone(e.target.value)}
+                placeholder="010XXXXXXXX"
+                dir="ltr"
+                className="w-full h-12 px-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-semibold text-right transition-all outline-none"
+              />
+              <span className="text-[10px] text-slate-400 block">معبأ تلقائياً من حسابك</span>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-800 mb-1">المنطقة *</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">
+                المنطقة / الحي:
+              </label>
               <select
                 value={locationId}
                 onChange={e => setLocationId(e.target.value)}
-                required
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 bg-white"
+                className="w-full h-12 px-3 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-semibold transition-all outline-none"
               >
-                <option value="" disabled>-- اختر المنطقة --</option>
                 {locations.map(loc => (
                   <option key={loc.id} value={loc.id}>
-                    {loc.nameAr} ({loc.governorate})
+                    {loc.nameAr}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Address details */}
-          <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1">
-              العنوان بالتفصيل (الشارع، رقم العمارة، الشقة) *
+          {/* Address Details */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700 block">
+              العنوان التفصيلي للزيارة: <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
-              required
               value={addressDetails}
               onChange={e => setAddressDetails(e.target.value)}
-              placeholder="مثال: 14 شارع مصدق، الدور 3، شقة 7، بجوار مسجد..."
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 text-right"
+              placeholder="الشارع، رقم العمارة، رقم الشقة..."
+              className="w-full h-12 px-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-medium transition-all outline-none"
             />
+            <span className="text-[10px] text-slate-400 block">معبأ تلقائياً من ملفك الشخصي</span>
           </div>
 
-          {/* Interactive Leaflet Map for Pin Drop */}
-          <div className="pt-1 pb-1">
-            <LocationMap
-              mode="picker"
-              coordinates={coordinates}
-              onChange={setCoordinates}
-              initialAreaName={selectedLocation?.nameAr}
-              heightClass="h-52 sm:h-60"
-              label="تحديد موقع العطل / المنزل بدقة على الخريطة (Pin Drop)"
-            />
-          </div>
-
-          {/* Optional photo URL */}
-          <div>
-            <label className="block text-xs font-bold text-slate-800 mb-1">
-              صورة للمشكلة أو المكان (اختياري)
-            </label>
-            <div className="relative">
+          {/* Date & Time Preferences */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">تاريخ الزيارة المقترح:</label>
               <input
-                type="url"
-                value={photoUrl}
-                onChange={e => setPhotoUrl(e.target.value)}
-                placeholder="رابط صورة لتوضيح العطل إن توفر..."
-                className="w-full pl-3 pr-8 py-2 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-amber-500 text-right"
+                type="date"
+                value={preferredDate}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={e => setPreferredDate(e.target.value)}
+                className="w-full h-12 px-4 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-medium transition-all outline-none"
               />
-              <ImageIcon className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-3" />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 block">الوقت المفضل:</label>
+              <select
+                value={preferredTime}
+                onChange={e => setPreferredTime(e.target.value)}
+                className="w-full h-12 px-3 rounded-2xl bg-slate-100/80 border border-transparent focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-slate-900 text-sm font-semibold transition-all outline-none"
+              >
+                <option value="صباحاً (10 - 2)">صباحاً (10 ص - 2 ظ)</option>
+                <option value="عصراً (2 - 6)">عصراً (2 ظ - 6 م)</option>
+                <option value="مساءً (6 - 10)">مساءً (6 م - 10 م)</option>
+                <option value="أي وقت متاح">أي وقت متاح للفني</option>
+              </select>
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+          {/* Free Guarantee Badge */}
+          <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100/80 flex items-center gap-2.5 text-xs text-emerald-950">
+            <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>منصة خلصلى مجانية بالكامل. لا عمولات ولا رسوم وساطة، ويتم الحساب مع الفني مباشرة بعد الانتهاء.</span>
+          </div>
+
+          {/* Primary Action Button */}
+          <div className="pt-2">
             <button
               type="submit"
-              disabled={loading}
-              className="flex-1 py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-sm shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              disabled={loading || !user}
+              className="w-full h-13 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 disabled:bg-slate-300 text-white font-black text-sm shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/30 transition-all flex items-center justify-center gap-2"
             >
               {loading ? (
-                <span>جاري إرسال الطلب...</span>
+                <span>جارٍ إرسال الطلب...</span>
               ) : (
                 <>
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>تأكيد وإرسال طلب الحجز الآن</span>
+                  <span>إرسال طلب الخدمة الآن</span>
+                  <ArrowLeft className="w-4 h-4" />
                 </>
               )}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="py-3 px-4 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 font-bold text-sm"
-            >
-              إلغاء
             </button>
           </div>
         </form>
@@ -419,4 +406,3 @@ export function BookingModal({ isOpen, onClose, provider, initialServiceId, onBo
     </div>
   );
 }
-

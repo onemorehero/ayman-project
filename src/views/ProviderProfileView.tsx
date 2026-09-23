@@ -7,13 +7,15 @@ import {
   Phone,
   Calendar,
   CheckCircle2,
-  ChevronRight,
-  MessageSquare,
-  Sparkles,
+  Share2,
+  Copy,
+  Check,
   AlertTriangle,
-  Award,
   Images,
-  ArrowRight
+  ArrowRight,
+  Zap,
+  MessageSquare,
+  Sparkles
 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { BookingModal } from '../components/BookingModal.js';
@@ -38,38 +40,67 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [selectedServiceId, setSelectedServiceId] = useState<string | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<'services' | 'photos' | 'reviews'>('services');
-
-  const fetchProviderData = () => {
-    setLoading(true);
-    api.getProviderById(providerId)
-      .then(data => setProvider(data))
-      .catch(err => setError(err.message || 'فشل تحميل بيانات مقدم الخدمة'))
-      .finally(() => setLoading(false));
-  };
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
-    fetchProviderData();
+    let isMounted = true;
+    setLoading(true);
+    setError(null);
+
+    api.getProviderBySlugOrId(providerId)
+      .then(data => {
+        if (!isMounted) return;
+        setProvider(data as any);
+
+        // Update URL to clean /provider/:slug without reloading
+        const targetSlug = data.slug || data.id;
+        if (window.location.pathname !== `/provider/${targetSlug}`) {
+          window.history.replaceState({ providerId: data.id }, '', `/provider/${targetSlug}`);
+        }
+      })
+      .catch(err => {
+        if (!isMounted) return;
+        setError(err.message || 'فشل تحميل بيانات مقدم الخدمة');
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [providerId]);
+
+  const handleCopyLink = () => {
+    const slug = provider?.slug || provider?.id || providerId;
+    const url = `${window.location.origin}/provider/${slug}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => {
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2500);
+      });
+    }
+  };
+
+  const handleBookService = (serviceId?: string) => {
+    setSelectedServiceId(serviceId);
+    setIsBookingModalOpen(true);
+  };
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        <div className="h-5 w-36 bg-slate-200 rounded animate-pulse"></div>
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 animate-pulse space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-slate-200 shrink-0"></div>
-            <div className="flex-1 space-y-3 w-full">
-              <div className="h-6 bg-slate-200 rounded w-1/3"></div>
-              <div className="h-4 bg-slate-100 rounded w-1/4"></div>
-              <div className="h-4 bg-slate-100 rounded w-1/2"></div>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+        <div className="h-5 w-32 bg-slate-200 rounded animate-pulse" />
+        <div className="bg-white rounded-3xl border border-slate-100 p-6 sm:p-8 space-y-6 animate-pulse">
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            <div className="w-24 h-24 rounded-2xl bg-slate-200 shrink-0" />
+            <div className="flex-1 space-y-3 w-full text-center sm:text-right">
+              <div className="h-7 bg-slate-200 rounded w-1/2 mx-auto sm:mx-0" />
+              <div className="h-4 bg-slate-100 rounded w-1/3 mx-auto sm:mx-0" />
+              <div className="h-4 bg-slate-100 rounded w-2/3 mx-auto sm:mx-0" />
             </div>
-            <div className="w-full sm:w-44 h-12 bg-slate-200 rounded-2xl"></div>
           </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-white p-5 rounded-2xl border border-slate-200 animate-pulse h-28"></div>
-          ))}
+          <div className="h-14 bg-slate-200 rounded-2xl" />
         </div>
       </div>
     );
@@ -77,248 +108,268 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
 
   if (error || !provider) {
     return (
-      <div className="max-w-xl mx-auto py-20 px-4 text-center space-y-4">
+      <div className="max-w-md mx-auto py-20 px-4 text-center space-y-4">
         <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
           <AlertTriangle className="w-7 h-7" />
         </div>
-        <h3 className="font-extrabold text-slate-900 text-lg">{error || 'مقدم الخدمة غير موجود'}</h3>
-        <p className="text-xs text-slate-500 font-normal">
-          ربما تم تغيير المعرف أو لم يعد الفني متاحاً حالياً.
+        <h3 className="font-bold text-slate-900 text-lg">{error || 'مقدم الخدمة غير موجود'}</h3>
+        <p className="text-xs text-slate-500">
+          ربما تم تعديل الرابط أو لم يعد حساب الفني متوفراً في الوقت الحالي.
         </p>
         <button
           type="button"
           onClick={onBack}
-          className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors cursor-pointer shadow-xs"
+          className="h-11 px-6 rounded-2xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-500 active:scale-95 transition-all inline-flex items-center gap-2 shadow-md shadow-emerald-600/20"
         >
-          العودة لقائمة الفنيين
+          <ArrowRight className="w-4 h-4" />
+          <span>العودة لقائمة الفنيين</span>
         </button>
       </div>
     );
   }
 
-  const handleBookService = (serviceId?: string) => {
-    setSelectedServiceId(serviceId);
-    setIsBookingModalOpen(true);
-  };
+  const services = provider.services || [];
+  const areas = provider.areas || [];
+  const reviews = provider.reviews || [];
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Back button */}
-      <div>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+      {/* Top Bar: Navigation & Link Sharing */}
+      <div className="flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-600 hover:text-slate-900 hover:border-slate-300 transition-all shadow-2xs cursor-pointer group"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white border border-slate-200/80 text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 active:scale-95 transition-all shadow-xs"
         >
-          <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          <span>الرجوع إلى قائمة الفنيين</span>
+          <ArrowRight className="w-4 h-4" />
+          <span>تصفح كل الفنيين</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleCopyLink}
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white border border-slate-200/80 text-xs font-bold text-slate-700 hover:text-slate-900 hover:bg-slate-50 active:scale-95 transition-all shadow-xs cursor-pointer"
+          title="مشاركة رابط الفني المباشر"
+        >
+          {copiedLink ? (
+            <>
+              <Check className="w-4 h-4 text-emerald-600" />
+              <span className="text-emerald-700 font-bold">تم نسخ الرابط!</span>
+            </>
+          ) : (
+            <>
+              <Share2 className="w-4 h-4 text-slate-500" />
+              <span>مشاركة الرابط الشخصي</span>
+            </>
+          )}
         </button>
       </div>
 
-      {/* Main Profile Header Card */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-xs relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+      {/* Hero Card */}
+      <div className="bg-white rounded-3xl border border-slate-100/80 p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-6">
+        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-right">
           <img
             src={provider.user?.avatarUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200'}
             alt={provider.businessName}
-            className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover border-2 border-amber-400 shadow-md shrink-0"
+            className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl object-cover border border-slate-200 shadow-sm shrink-0"
           />
 
-          <div className="flex-1 space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                {provider.businessName}
-              </h1>
+          <div className="flex-1 space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                  {provider.businessName}
+                </h1>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  الرابط المباشر: <span className="font-mono text-emerald-700 font-bold">/provider/{provider.slug || provider.id}</span>
+                </p>
+              </div>
+
               {provider.isVerified && (
-                <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                  <span>موثق بالرقم القومي</span>
-                </span>
+                <div className="inline-flex items-center gap-1.5 text-xs text-emerald-800 self-center sm:self-auto bg-emerald-50 px-3.5 py-1.5 rounded-full border border-emerald-200">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span className="font-bold">حرفي معتمد وموثق</span>
+                </div>
               )}
             </div>
 
-            <p className="text-sm font-bold text-slate-600">
-              {provider.user?.name} | {provider.categories?.map(c => c.nameAr).join(' • ')}
+            <p className="text-sm text-slate-700 leading-relaxed max-w-2xl font-normal">
+              {provider.bio || 'فني محترف ومتخصص في تقديم خدمات الصيانة والإصلاح بجودة عالية وبشكل مباشر.'}
             </p>
 
-            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 pt-1">
-              <div className="flex items-center gap-1.5 font-black text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">
-                <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
-                <span className="text-sm">{provider.rating}</span>
-                <span className="text-slate-400 font-medium">({provider.reviewCount} تقييم)</span>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-y-1 gap-x-3 text-xs text-slate-600 pt-1 font-medium">
+              <div className="flex items-center gap-1">
+                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                <span className="font-bold text-slate-900">{provider.rating.toFixed(1)}</span>
+                <span className="text-slate-400">({provider.reviewCount} تقييم)</span>
               </div>
-
-              <span className="text-slate-300">•</span>
-
-              <div className="flex items-center gap-1 text-slate-700 font-bold">
-                <Award className="w-4 h-4 text-amber-500" />
-                <span>خبرة {provider.experienceYears} سنوات</span>
-              </div>
-
-              <span className="text-slate-300">•</span>
-
-              <div className="flex items-center gap-1 text-slate-700 font-medium">
-                <Clock className="w-4 h-4 text-slate-400" />
-                <span>
-                  ساعات العمل: {provider.workingHours.start} - {provider.workingHours.end}
-                </span>
-              </div>
+              <span className="text-slate-300">·</span>
+              <span>خبرة {provider.experienceYears} سنوات</span>
+              <span className="text-slate-300">·</span>
+              <span>{provider.completedJobs || 0} خدمة منجزة</span>
+              {areas.length > 0 && (
+                <>
+                  <span className="text-slate-300">·</span>
+                  <span className="flex items-center gap-1 text-slate-700">
+                    <MapPin className="w-3.5 h-3.5 text-slate-500" />
+                    <span>{areas.map(a => a.nameAr).join('، ')}</span>
+                  </span>
+                </>
+              )}
             </div>
-
-            {/* Areas badges */}
-            <div className="flex items-center gap-1.5 flex-wrap pt-2">
-              <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                <span>مناطق التغطية:</span>
-              </span>
-              {provider.areas?.map(area => (
-                <span
-                  key={area.id}
-                  className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-bold"
-                >
-                  {area.nameAr}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Primary CTA Book button */}
-          <div className="sm:text-left w-full sm:w-auto pt-4 sm:pt-0 shrink-0">
-            <button
-              type="button"
-              onClick={() => handleBookService()}
-              className="w-full sm:w-auto py-3.5 px-8 rounded-2xl bg-amber-500 hover:bg-amber-600 active:scale-98 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Calendar className="w-4 h-4 stroke-[2.5]" />
-              <span>طلب حجز موعد</span>
-            </button>
-            <p className="text-[11px] text-slate-500 font-medium mt-2 text-center sm:text-left">
-              اتفاق السعر مباشرة مع الفني
-            </p>
           </div>
         </div>
 
-        {/* Bio description */}
-        <div className="mt-6 pt-6 border-t border-slate-100">
-          <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider mb-2">
-            نبذة عن مقدم الخدمة والخبرات المهنية
-          </h3>
-          <p className="text-sm text-slate-700 leading-relaxed max-w-4xl font-normal">
-            {provider.bio}
-          </p>
+        {/* Free platform reassurance notice */}
+        <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-100 flex items-center gap-2.5 text-xs text-emerald-950 font-medium">
+          <Zap className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>منصة خلصلى مجانية 100%: تواصل مباشر مع الفني بدون أي عمولات أو رسوم وساطة مستقطعة.</span>
+        </div>
+
+        {/* Large Prominent Mobile-First CTA Button */}
+        <div>
+          <button
+            type="button"
+            onClick={() => handleBookService()}
+            className="w-full h-14 sm:h-16 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-base sm:text-lg shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-3 cursor-pointer"
+          >
+            <span>طلب خدمة فوري من {provider.businessName}</span>
+            <ArrowRight className="w-5 h-5 rotate-180" />
+          </button>
         </div>
       </div>
 
-      {/* Tabs Menu */}
-      <div className="flex gap-2 border-b border-slate-200">
+      {/* Tabs */}
+      <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl">
         <button
           type="button"
           onClick={() => setActiveTab('services')}
-          className={`py-3 px-5 font-bold text-sm border-b-2 transition-all cursor-pointer ${
+          className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
             activeTab === 'services'
-              ? 'border-amber-500 text-amber-700 bg-amber-50/50 rounded-t-xl'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-white text-emerald-700 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          الخدمات المتاحة ({provider.services?.length || 0})
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('photos')}
-          className={`py-3 px-5 font-bold text-sm border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
-            activeTab === 'photos'
-              ? 'border-amber-500 text-amber-700 bg-amber-50/50 rounded-t-xl'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Images className="w-4 h-4" />
-          <span>أعمال منفذة ({provider.workPhotos?.length || 0})</span>
+          الخدمات المتاحة ({services.length})
         </button>
 
         <button
           type="button"
           onClick={() => setActiveTab('reviews')}
-          className={`py-3 px-5 font-bold text-sm border-b-2 transition-all flex items-center gap-1.5 cursor-pointer ${
+          className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
             activeTab === 'reviews'
-              ? 'border-amber-500 text-amber-700 bg-amber-50/50 rounded-t-xl'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
+              ? 'bg-white text-emerald-700 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Star className="w-4 h-4" />
-          <span>تقييمات العملاء ({provider.reviews?.length || 0})</span>
+          تقييمات العملاء ({reviews.length})
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('photos')}
+          className={`flex-1 h-11 rounded-xl text-xs sm:text-sm font-bold transition-all active:scale-95 ${
+            activeTab === 'photos'
+              ? 'bg-white text-emerald-700 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          معرض الأعمال ({provider.workPhotos?.length || 0})
         </button>
       </div>
 
-      {/* Tab 1: Services List */}
+      {/* Tab 1: Services */}
       {activeTab === 'services' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {provider.services?.length === 0 ? (
-            <div className="col-span-2 py-12 text-center bg-white rounded-2xl border border-slate-200 p-6">
-              <p className="text-xs text-slate-400 font-medium">لم يتم إدراج خدمات محددة بعد، يمكنك طلب حجز عام بالضغط على الزر بالأعلى.</p>
-            </div>
-          ) : (
-            provider.services?.map(srv => (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {services.map(service => (
               <div
-                key={srv.id}
-                className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between hover:border-amber-300 hover:shadow-md transition-all group"
+                key={service.id}
+                className="bg-white rounded-3xl p-5 border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] flex flex-col justify-between hover:-translate-y-1 hover:shadow-md transition-all duration-300 space-y-3"
               >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-black text-base text-slate-900 group-hover:text-amber-800 transition-colors">
-                      {srv.nameAr}
-                    </h3>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200/70 shrink-0">
-                      متاحة للحجز
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-600 mt-1.5 leading-relaxed font-normal">
-                    {srv.description}
-                  </p>
+                <div className="space-y-1">
+                  <h3 className="font-bold text-slate-900 text-base">{service.nameAr}</h3>
+                  <p className="text-xs text-slate-500 leading-relaxed">{service.description || 'صيانة وفحص وإصلاح متخصص بأحدث المعدات.'}</p>
                 </div>
 
-                <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-slate-500 font-medium">
-                    السعر: بالمعاينة والاتفاق
+                <div className="pt-2 border-t border-slate-50 flex items-center justify-between">
+                  <span className="text-xs text-slate-500 font-medium">
+                    {service.basePrice ? `يبدأ من ${service.basePrice} ج.م تقريباً` : 'تسعير مباشر حسب المعاينة'}
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleBookService(srv.id)}
-                    className="py-2 px-3.5 rounded-xl bg-amber-50 hover:bg-amber-500 hover:text-slate-950 text-amber-900 font-extrabold text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    onClick={() => handleBookService(service.id)}
+                    className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold transition-all shadow-xs"
                   >
-                    <span>طلب الخدمة</span>
-                    <ChevronRight className="w-3.5 h-3.5 rotate-180 stroke-[2.5]" />
+                    طلب هذه الخدمة
                   </button>
                 </div>
               </div>
-            ))
-          )}
+            ))}
+          </div>
+
+          {/* Guaranteed "Custom / Other" card */}
+          <div className="bg-slate-100/70 rounded-3xl p-5 border border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="space-y-1 text-center sm:text-right">
+              <h4 className="font-bold text-slate-900 text-sm">لم تجد الخدمة المحددة في القائمة؟</h4>
+              <p className="text-xs text-slate-600">يمكنك إرسال طلب لخدمة مخصصة وسيتواصل معك الفني لتحديد التفاصيل فوراً.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleBookService('other')}
+              className="h-11 px-5 rounded-2xl border border-emerald-600 bg-white text-emerald-700 hover:bg-emerald-600 hover:text-white active:scale-95 text-xs font-bold transition-all shrink-0 cursor-pointer shadow-xs"
+            >
+              طلب صيانة مخصصة
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Tab 2: Photos Gallery */}
-      {activeTab === 'photos' && (
-        <div className="space-y-4">
-          {provider.workPhotos?.length === 0 ? (
-            <div className="py-16 text-center bg-white rounded-2xl border border-slate-200 p-8 space-y-2">
-              <Images className="w-10 h-10 text-slate-300 mx-auto" />
-              <p className="text-xs text-slate-500 font-medium">لم يقم الفني برفع صور لأعماله السابقة بعد</p>
+      {/* Tab 2: Reviews */}
+      {activeTab === 'reviews' && (
+        <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] space-y-5">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <div>
+              <h3 className="font-bold text-slate-900 text-base">تقييمات وتجارب العملاء</h3>
+              <p className="text-xs text-slate-400">تقييمات حقيقية موثقة من عملاء أنجز الفني خدماتهم</p>
             </div>
+            <div className="flex items-center gap-1.5 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-100">
+              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <span className="font-bold text-slate-900 text-sm">{provider.rating.toFixed(1)}</span>
+              <span className="text-xs text-slate-400">/ 5.0</span>
+            </div>
+          </div>
+
+          {reviews.length === 0 ? (
+            <p className="text-center py-10 text-xs text-slate-500">لا توجد تقييمات مكتوبة حتى الآن. كن أول من يقيّم الفني بعد إنجاز الطلب!</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-              {provider.workPhotos?.map((photo, index) => (
-                <div
-                  key={index}
-                  className="rounded-2xl overflow-hidden border border-slate-200 shadow-xs bg-slate-100 group relative aspect-video"
-                >
-                  <img
-                    src={photo}
-                    alt={`عمل سابق ${index + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3 text-white text-xs font-bold">
-                    عمل سابق موثق في الميدان
+            <div className="divide-y divide-slate-100">
+              {reviews.map(rev => (
+                <div key={rev.id} className="py-4 space-y-2 first:pt-0 last:pb-0">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <img
+                        src={rev.customerAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
+                        alt={rev.customerName || 'عميل'}
+                        className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                      />
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">{rev.customerName || 'عميل خلصلى'}</p>
+                        <p className="text-[10px] text-slate-400">{new Date(rev.createdAt).toLocaleDateString('ar-EG')}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <Star
+                          key={star}
+                          className={`w-3.5 h-3.5 ${
+                            star <= rev.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'
+                          }`}
+                        />
+                      ))}
+                    </div>
                   </div>
+                  <p className="text-xs text-slate-700 leading-relaxed pr-10">{rev.comment}</p>
                 </div>
               ))}
             </div>
@@ -326,88 +377,23 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
         </div>
       )}
 
-      {/* Tab 3: Reviews */}
-      {activeTab === 'reviews' && (
-        <div className="space-y-4">
-          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="text-4xl font-black text-slate-900 tracking-tight">{provider.rating}</span>
-              <div>
-                <div className="flex items-center text-amber-500">
-                  {[1, 2, 3, 4, 5].map(s => (
-                    <Star
-                      key={s}
-                      className={`w-4 h-4 ${s <= Math.round(provider.rating) ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`}
-                    />
-                  ))}
-                </div>
-                <p className="text-xs text-slate-500 mt-1 font-medium">بناءً على {provider.reviewCount} تقييم حقيقي</p>
-              </div>
+      {/* Tab 3: Photos */}
+      {activeTab === 'photos' && (
+        <div className="bg-white rounded-3xl border border-slate-100 p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          {provider.workPhotos && provider.workPhotos.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {provider.workPhotos.map((url, idx) => (
+                <img
+                  key={idx}
+                  src={url}
+                  alt={`عمل ${idx + 1}`}
+                  className="w-full h-44 rounded-2xl object-cover border border-slate-100 hover:opacity-95 transition-opacity"
+                />
+              ))}
             </div>
-
-            <div className="flex items-center gap-2 text-xs text-slate-500 bg-white p-2.5 rounded-xl border border-slate-200 max-w-sm">
-              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>التقييمات مقتصرة فقط على العملاء الذين اكتملت طلباتهم فعلياً عبر المنصة</span>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {provider.reviews?.length === 0 ? (
-              <div className="py-14 text-center bg-white rounded-2xl border border-slate-200 p-6 space-y-2">
-                <Star className="w-10 h-10 text-slate-300 mx-auto" />
-                <p className="text-xs text-slate-500 font-medium">لا توجد تقييمات مكتوبة حتى الآن لهذا الفني</p>
-              </div>
-            ) : (
-              provider.reviews?.map(rev => (
-                <div key={rev.id} className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={rev.customerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                        alt={rev.customerName}
-                        className="w-10 h-10 rounded-full object-cover border border-slate-200"
-                      />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-extrabold text-sm text-slate-900">{rev.customerName}</h4>
-                          <span className="text-[10px] font-bold px-2 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            حجز مكتمل
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                          <div className="flex items-center text-amber-400">
-                            {[1, 2, 3, 4, 5].map(star => (
-                              <Star
-                                key={star}
-                                className={`w-3.5 h-3.5 ${star <= rev.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`}
-                              />
-                            ))}
-                          </div>
-                          <span>•</span>
-                          <span>{new Date(rev.createdAt).toLocaleDateString('ar-EG')}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
-                    {rev.comment}
-                  </p>
-
-                  {/* Provider Reply if exists */}
-                  {rev.providerReply && (
-                    <div className="p-3.5 rounded-xl bg-amber-50/80 border-r-4 border-amber-500 text-xs text-slate-800 space-y-1">
-                      <p className="font-black text-amber-900 flex items-center gap-1.5">
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span>رد الفني ({provider.businessName}):</span>
-                      </p>
-                      <p className="text-slate-700 leading-relaxed font-normal">{rev.providerReply}</p>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+          ) : (
+            <p className="text-center py-10 text-xs text-slate-500">لم يقم الفني برفع صور في معرض الأعمال حتى الآن.</p>
+          )}
         </div>
       )}
 
@@ -419,8 +405,8 @@ export function ProviderProfileView({ providerId, onBack, onBookingSuccess }: Pr
           provider={provider}
           initialServiceId={selectedServiceId}
           onBookingCreated={(newBooking) => {
+            setIsBookingModalOpen(false);
             onBookingSuccess(newBooking);
-            fetchProviderData();
           }}
         />
       )}

@@ -7,6 +7,9 @@ interface AuthContextType {
   customer: Customer | null;
   provider: Provider | null;
   isLoading: boolean;
+  isFirstLogin: boolean;
+  dismissTour: () => void;
+  triggerTour: () => void;
   notifications: AppNotification[];
   unreadNotificationsCount: number;
   login: (email: string, password?: string) => Promise<void>;
@@ -26,11 +29,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [provider, setProvider] = useState<Provider | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   // Load initial user session or default to demo customer
   useEffect(() => {
-    const savedUserId = localStorage.getItem('egypt_marketplace_user_id') || 'usr_customer1';
+    const savedUserId = localStorage.getItem('khalasly_user_id') || localStorage.getItem('egypt_marketplace_user_id') || 'usr_customer1';
     setApiUser(savedUserId);
 
     api.getMe()
@@ -39,7 +43,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setCustomer(res.customer);
         setProvider(res.provider);
         setApiUser(res.user.id);
-        localStorage.setItem('egypt_marketplace_user_id', res.user.id);
+        localStorage.setItem('khalasly_user_id', res.user.id);
+
+        // Check if user has an uncompleted first-registration tour
+        const isPendingTour = localStorage.getItem('khalasly_tour_pending_' + res.user.id);
+        const isDismissed = localStorage.getItem('khalasly_tour_completed_' + res.user.id);
+        if (isPendingTour === 'true' && !isDismissed) {
+          setIsFirstLogin(true);
+        }
       })
       .catch(() => {
         // Fallback to customer switch
@@ -48,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setCustomer(res.customer);
           setProvider(res.provider);
           setApiUser(res.user.id);
-          localStorage.setItem('egypt_marketplace_user_id', res.user.id);
+          localStorage.setItem('khalasly_user_id', res.user.id);
         });
       })
       .finally(() => {
@@ -94,7 +105,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCustomer(res.customer);
       setProvider(res.provider);
       setApiUser(res.user.id);
-      localStorage.setItem('egypt_marketplace_user_id', res.user.id);
+      localStorage.setItem('khalasly_user_id', res.user.id);
+
+      // Only show tour if they had registered and not completed it
+      const isPendingTour = localStorage.getItem('khalasly_tour_pending_' + res.user.id);
+      const isDismissed = localStorage.getItem('khalasly_tour_completed_' + res.user.id);
+      if (isPendingTour === 'true' && !isDismissed) {
+        setIsFirstLogin(true);
+      } else {
+        setIsFirstLogin(false);
+      }
+
       await refreshNotifications();
     } finally {
       setIsLoading(false);
@@ -109,11 +130,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCustomer(res.customer);
       setProvider(res.provider);
       setApiUser(res.user.id);
-      localStorage.setItem('egypt_marketplace_user_id', res.user.id);
+      localStorage.setItem('khalasly_user_id', res.user.id);
+
+      // Mark this user as newly registered to trigger role-based tour strictly on first signup
+      setIsFirstLogin(true);
+      localStorage.setItem('khalasly_tour_pending_' + res.user.id, 'true');
+
       await refreshNotifications();
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const dismissTour = () => {
+    setIsFirstLogin(false);
+    if (user?.id) {
+      localStorage.removeItem('khalasly_tour_pending_' + user.id);
+      localStorage.setItem('khalasly_tour_completed_' + user.id, 'true');
+    }
+  };
+
+  const triggerTour = () => {
+    setIsFirstLogin(true);
   };
 
   const logout = () => {
@@ -121,8 +159,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setCustomer(null);
     setProvider(null);
     setNotifications([]);
+    setIsFirstLogin(false);
     setApiUser(null);
-    localStorage.removeItem('egypt_marketplace_user_id');
+    localStorage.removeItem('khalasly_user_id');
   };
 
   const switchRole = async (role: 'customer' | 'provider' | 'admin') => {
@@ -133,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setCustomer(res.customer);
       setProvider(res.provider);
       setApiUser(res.user.id);
-      localStorage.setItem('egypt_marketplace_user_id', res.user.id);
+      localStorage.setItem('khalasly_user_id', res.user.id);
       const notifs = await api.getNotifications(res.user.id);
       setNotifications(notifs);
     } finally {
@@ -169,6 +208,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         customer,
         provider,
         isLoading,
+        isFirstLogin,
+        dismissTour,
+        triggerTour,
         notifications,
         unreadNotificationsCount,
         login,

@@ -23,6 +23,11 @@ export function ReviewModal({ isOpen, onClose, booking, onReviewSubmitted }: Pro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !user.id) {
+      setError('يجب تسجيل الدخول أولاً لتتمكن من تقييم الخدمة');
+      return;
+    }
+
     if (!comment.trim()) {
       setError('يرجى كتابة تعليق يوضح تجربتك مع مقدم الخدمة');
       return;
@@ -37,7 +42,7 @@ export function ReviewModal({ isOpen, onClose, booking, onReviewSubmitted }: Pro
         providerId: booking.providerId,
         rating,
         comment,
-        customerUserId: user?.id || 'usr_customer1'
+        customerUserId: user.id
       });
 
       onReviewSubmitted(review);
