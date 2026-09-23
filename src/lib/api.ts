@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { compressImage, fileToDataUrl } from './imageCompressor.js';
 import type {
   User,
   Customer,
@@ -34,6 +35,130 @@ let currentUserId: string | null = null;
 
 export function setApiUser(userId: string | null) {
   currentUserId = userId;
+}
+
+// ====================================================================
+// DUAL NOTIFICATION TRIGGER INFRASTRUCTURE (Native Push + Email)
+// ====================================================================
+
+export interface NotificationTriggerPayload {
+  eventType: 'BOOKING_CREATED' | 'BOOKING_STATUS_CHANGED' | 'BOOKING_COMPLETED' | 'NEW_REVIEW' | 'DISPUTE_RAISED';
+  booking: {
+    id: string;
+    bookingNumber: string;
+    serviceTitle: string;
+    problemDescription: string;
+    status: string;
+    scheduledDate?: string;
+    scheduledTime?: string;
+    addressDetails?: string;
+    totalPrice?: number;
+    urgency?: string;
+  };
+  customer: {
+    id: string;
+    name: string;
+    phone: string;
+    email?: string;
+    address?: string;
+    pushSubscription?: any;
+  };
+  provider: {
+    id: string;
+    businessName: string;
+    email: string;
+    phone?: string;
+    userId: string;
+    pushSubscription?: any;
+  };
+  target: 'PROVIDER' | 'CUSTOMER' | 'BOTH';
+  notification: {
+    title: string;
+    body: string;
+    url: string;
+    icon: string;
+    badge: string;
+  };
+  emailDetails: {
+    to: string;
+    subject: string;
+    previewText: string;
+    htmlContent: string;
+  };
+  timestamp: string;
+}
+
+/**
+ * Dispatches a dual notification (Native Web Push + Transactional Email)
+ * through a secure server-side Webhook or Supabase Edge Function endpoint.
+ */
+export async function dispatchNotificationTrigger(payload: NotificationTriggerPayload): Promise<void> {
+  const webhookUrl =
+    ((import.meta as any).env?.VITE_NOTIFICATION_WEBHOOK_URL as string | undefined)?.trim() ||
+    (supabaseUrl ? `${supabaseUrl}/functions/v1/dispatch-notification` : '/api/notifications/dispatch');
+
+  // Engineering Log: Trace the dual trigger payload
+  console.groupCollapsed(`[Notification Pipeline] 🚀 ${payload.eventType} => ${payload.target}`);
+  console.log('Recipient Email:', payload.emailDetails.to);
+  console.log('Subject:', payload.emailDetails.subject);
+  console.log('Push Title:', payload.notification.title);
+  console.log('Push Body:', payload.notification.body);
+  console.log('Push Target URL:', payload.notification.url);
+  console.log('Target Push Subscription:', payload.target === 'PROVIDER' ? payload.provider.pushSubscription : payload.customer.pushSubscription);
+  console.log('Complete Payload:', payload);
+  console.groupEnd();
+
+  // 1. Dispatch to Webhook / Edge Function in the background
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+
+    fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(supabaseAnonKey ? { Authorization: `Bearer ${supabaseAnonKey}` } : {})
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    })
+      .then(res => {
+        clearTimeout(timeout);
+        if (res.ok) {
+          console.info(`[Notification Pipeline] Webhook dispatched successfully to ${webhookUrl}`);
+        }
+      })
+      .catch(err => {
+        clearTimeout(timeout);
+        // Silent catch: Edge function might not be deployed yet in development
+        console.info('[Notification Pipeline] Edge function call skipped or offline:', err.message);
+      });
+  } catch (err) {
+    // Non-blocking
+  }
+
+  // 2. Also trigger a local Native Notification if the browser permits
+  if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+    try {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(reg => {
+          reg.showNotification(payload.notification.title, {
+            body: payload.notification.body,
+            icon: payload.notification.icon || '/favicon.svg',
+            badge: payload.notification.badge || '/favicon.svg',
+            vibrate: [200, 100, 200],
+            tag: `khalasly-${payload.booking.id}-${Date.now()}`,
+            data: {
+              url: payload.notification.url,
+              bookingId: payload.booking.id
+            }
+          } as any);
+        });
+      }
+    } catch {
+      // ignore
+    }
+  }
 }
 
 // Fallback HTTP helper in case Supabase credentials are not supplied
@@ -552,6 +677,65 @@ export const api = {
 
     const user = mapUser(updatedUserRow);
     return { user, customer };
+  },
+
+  uploadUserAvatar: async (
+    userId: string,
+    rawFile: File
+  ): Promise<{
+    url: string;
+    originalSizeKB: number;
+    compressedSizeKB: number;
+    savedPercentage: number;
+  }> => {
+    if (!rawFile) {
+      throw new Error('يرجى تحديد ملف صورة صالح');
+    }
+
+    // 1. Client-side compression strictly under 0.2MB (200KB) and max 800x800px
+    const compression = await compressImage(rawFile);
+    const compressedFile = compression.compressedFile;
+
+    // 2. Prepare path
+    const cleanUserId = userId ? userId.replace(/[^a-zA-Z0-9_-]/g, '_') : 'user';
+    const ext = (compressedFile.name.split('.').pop() || 'jpg').toLowerCase();
+    const filePath = `avatars/${cleanUserId}_${Date.now()}.${ext}`;
+
+    let finalUrl = '';
+
+    if (supabase) {
+      try {
+        const { data: uploadData, error: uploadErr } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, compressedFile, {
+            cacheControl: '3600',
+            upsert: true,
+            contentType: compressedFile.type || 'image/jpeg'
+          });
+
+        if (!uploadErr && uploadData) {
+          const { data: publicUrlData } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+          finalUrl = publicUrlData.publicUrl;
+        } else {
+          // If 'avatars' bucket is not yet provisioned in Supabase, fallback cleanly
+          // to the lightweight compressed DataURL so avatar updates never fail
+          finalUrl = await fileToDataUrl(compressedFile);
+        }
+      } catch {
+        finalUrl = await fileToDataUrl(compressedFile);
+      }
+    } else {
+      finalUrl = await fileToDataUrl(compressedFile);
+    }
+
+    return {
+      url: finalUrl,
+      originalSizeKB: compression.originalSizeKB,
+      compressedSizeKB: compression.compressedSizeKB,
+      savedPercentage: compression.savedPercentage
+    };
   },
 
   registerCustomer: async (data: { name: string; email: string; phone: string; password?: string; address: string; notes?: string }) => {
@@ -1082,6 +1266,74 @@ export const api = {
       }
     }
 
+    // ====================================================================
+    // DUAL NOTIFICATION TRIGGER (Native Web Push + Email to Provider)
+    // ====================================================================
+    const providerUser = inserted.providers?.users;
+    const providerEmail = providerUser?.email || 'provider@khalasly.com';
+    const customerName = inserted.customer_user?.name || userRow?.name || 'عميل خلصلى';
+    const serviceTitle = inserted.services?.title || 'طلب صيانة';
+
+    dispatchNotificationTrigger({
+      eventType: 'BOOKING_CREATED',
+      target: 'PROVIDER',
+      booking: {
+        id: inserted.id,
+        bookingNumber: inserted.booking_number,
+        serviceTitle,
+        problemDescription: inserted.problem_description,
+        status: inserted.status,
+        scheduledDate: inserted.preferred_date || undefined,
+        scheduledTime: inserted.preferred_time || undefined,
+        addressDetails: inserted.address_details,
+        urgency: inserted.urgency
+      },
+      customer: {
+        id: activeUserId,
+        name: customerName,
+        phone: inserted.customer_phone || data.customerPhone,
+        email: inserted.customer_user?.email || undefined,
+        address: inserted.address_details
+      },
+      provider: {
+        id: data.providerId,
+        userId: providerRow?.user_id || inserted.providers?.user_id || '',
+        businessName: inserted.providers?.business_name || 'الفني',
+        email: providerEmail,
+        phone: providerUser?.phone || '',
+        pushSubscription: providerUser?.push_subscription || null
+      },
+      notification: {
+        title: `طلب حجز جديد | ${serviceTitle} 🛠️`,
+        body: `طلب جديد من العميل (${customerName}) برقم ${inserted.booking_number}: ${inserted.problem_description.substring(0, 90)}`,
+        url: '/?view=provider-dashboard',
+        icon: '/favicon.svg',
+        badge: '/favicon.svg'
+      },
+      emailDetails: {
+        to: providerEmail,
+        subject: `[خلصلى] طلب صيانة جديد برقم ${inserted.booking_number} من ${customerName}`,
+        previewText: `طلب حجز جديد لخدمة ${serviceTitle} في ${inserted.address_details}`,
+        htmlContent: `
+          <div dir="rtl" style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b;">
+            <h2 style="color: #059669;">طلب حجز جديد على منصة خلصلى! 🚀</h2>
+            <p>مرحباً <strong>${inserted.providers?.business_name || 'يا فني'}</strong>،</p>
+            <p>وصلك طلب حجز صيانة جديد من العميل <strong>${customerName}</strong>.</p>
+            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border-right: 4px solid #059669; margin: 15px 0;">
+              <p><strong>رقم الطلب:</strong> ${inserted.booking_number}</p>
+              <p><strong>الخدمة:</strong> ${serviceTitle}</p>
+              <p><strong>الموعد المقترح:</strong> ${inserted.preferred_date || 'في أقرب وقت'} - ${inserted.preferred_time || ''}</p>
+              <p><strong>العنوان:</strong> ${inserted.address_details}</p>
+              <p><strong>هاتف العميل:</strong> ${inserted.customer_phone}</p>
+              <p><strong>وصف العطل:</strong> ${inserted.problem_description}</p>
+            </div>
+            <p><a href="/?view=provider-dashboard" style="display: inline-block; background: #059669; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold;">الانتقال للوحة التحكم لقبول الطلب</a></p>
+          </div>
+        `
+      },
+      timestamp: new Date().toISOString()
+    }).catch(err => console.warn('[Notification Pipeline Error]:', err));
+
     return mapBooking(inserted);
   },
 
@@ -1192,6 +1444,79 @@ export const api = {
         is_read: false,
         created_at: new Date().toISOString()
       });
+
+      // ====================================================================
+      // DUAL NOTIFICATION TRIGGER (Native Web Push + Email to Customer)
+      // ====================================================================
+      const customerEmail = data.customer_user?.email || 'customer@khalasly.com';
+      const customerName = data.customer_user?.name || 'عميلنا العزيز';
+      const providerName = data.providers?.business_name || 'الفني';
+      const serviceTitle = data.services?.title || 'خدمة الصيانة';
+
+      let statusArabic = statusForDb;
+      if (statusForDb === 'ACCEPTED') statusArabic = 'تم قبول طلبك ✅';
+      else if (statusForDb === 'REJECTED') statusArabic = 'تم الاعتذار عن الطلب ❌';
+      else if (statusForDb === 'IN_PROGRESS') statusArabic = 'الفني في طريقه إليك / جارٍ العمل 🚗';
+      else if (statusForDb === 'COMPLETED') statusArabic = 'تم اكتمال تنفيذ الخدمة بنجاح 🎉';
+      else if (statusForDb === 'CANCELLED') statusArabic = 'تم إلغاء الطلب ⚠️';
+
+      dispatchNotificationTrigger({
+        eventType: 'BOOKING_STATUS_CHANGED',
+        target: 'CUSTOMER',
+        booking: {
+          id: data.id,
+          bookingNumber: data.booking_number,
+          serviceTitle,
+          problemDescription: data.problem_description || '',
+          status: statusForDb,
+          scheduledDate: data.preferred_date || undefined,
+          scheduledTime: data.preferred_time || undefined,
+          addressDetails: data.address_details,
+          totalPrice: data.final_price || undefined
+        },
+        customer: {
+          id: data.customer_user_id,
+          name: customerName,
+          phone: data.customer_phone,
+          email: customerEmail,
+          address: data.address_details,
+          pushSubscription: data.customer_user?.push_subscription || null
+        },
+        provider: {
+          id: data.provider_id,
+          userId: data.providers?.user_id || '',
+          businessName: providerName,
+          email: data.providers?.users?.email || '',
+          phone: data.providers?.users?.phone || ''
+        },
+        notification: {
+          title: `${statusArabic} | طلب رقم ${data.booking_number}`,
+          body: `قام الفني (${providerName}) بتحديث حالة طلبك (${serviceTitle}) إلى: ${statusArabic}`,
+          url: '/?view=customer-dashboard',
+          icon: '/favicon.svg',
+          badge: '/favicon.svg'
+        },
+        emailDetails: {
+          to: customerEmail,
+          subject: `[خلصلى] تحديث في حالة طلبك رقم ${data.booking_number}: ${statusArabic}`,
+          previewText: `قام الفني ${providerName} بتحديث حالة طلبك إلى ${statusArabic}`,
+          htmlContent: `
+            <div dir="rtl" style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b;">
+              <h2 style="color: #059669;">تحديث في حالة طلبك على خلصلى ✅</h2>
+              <p>مرحباً <strong>${customerName}</strong>،</p>
+              <p>نود إعلامك بأن الفني <strong>${providerName}</strong> قد قام بتحديث حالة طلبك برقم <strong>${data.booking_number}</strong>.</p>
+              <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border-right: 4px solid #059669; margin: 15px 0;">
+                <p><strong>الخدمة:</strong> ${serviceTitle}</p>
+                <p><strong>الحالة الحالية:</strong> ${statusArabic}</p>
+                ${data.rejection_reason ? `<p><strong>سبب الاعتذار:</strong> ${data.rejection_reason}</p>` : ''}
+                ${data.cancellation_reason ? `<p><strong>سبب الإلغاء:</strong> ${data.cancellation_reason}</p>` : ''}
+              </div>
+              <p><a href="/?view=customer-dashboard" style="display: inline-block; background: #059669; color: #ffffff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold;">متابعة تفاصيل الطلب في لوحة التحكم</a></p>
+            </div>
+          `
+        },
+        timestamp: new Date().toISOString()
+      }).catch(err => console.warn('[Notification Pipeline Error]:', err));
     }
 
     return mapBooking(data);

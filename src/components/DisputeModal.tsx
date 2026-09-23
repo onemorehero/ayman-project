@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { AlertCircle, Upload, X, CheckCircle2, ShieldAlert, Image as ImageIcon } from 'lucide-react';
+import { AlertCircle, Upload, X, CheckCircle2, ShieldAlert, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../context/AuthContext.js';
+import { compressImage, fileToDataUrl } from '../lib/imageCompressor.js';
 import type { Booking, Dispute } from '../types.js';
 
 interface DisputeModalProps {
@@ -35,6 +36,7 @@ export function DisputeModal({ isOpen, onClose, booking, onDisputeSubmitted }: D
   const [photoUrl, setPhotoUrl] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [compressingImage, setCompressingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -45,20 +47,25 @@ export function DisputeModal({ isOpen, onClose, booking, onDisputeSubmitted }: D
 
   if (!isOpen) return null;
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError('حجم الصورة يجب ألا يتجاوز 5 ميجابايت');
+      if (!file.type.startsWith('image/')) {
+        setError('يرجى اختيار ملف صورة صالح');
         return;
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
+      setCompressingImage(true);
+      setError(null);
+      try {
+        const { compressedFile } = await compressImage(file);
+        const result = await fileToDataUrl(compressedFile);
         setImagePreview(result);
         setPhotoUrl(result);
-      };
-      reader.readAsDataURL(file);
+      } catch (err: any) {
+        setError(err.message || 'فشل ضغط الصورة');
+      } finally {
+        setCompressingImage(false);
+      }
     }
   };
 
@@ -203,12 +210,23 @@ export function DisputeModal({ isOpen, onClose, booking, onDisputeSubmitted }: D
                   </div>
                 ) : (
                   <label className="cursor-pointer block">
-                    <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1.5" />
-                    <span className="text-xs font-semibold text-slate-600 block">انقر لرفع صورة إثبات (سكرين شوت المحادثة أو العطل)</span>
-                    <span className="text-[11px] text-slate-400 block mt-0.5">PNG, JPG حتى 5 ميجابايت (اختياري)</span>
+                    {compressingImage ? (
+                      <div className="py-2 flex flex-col items-center">
+                        <Loader2 className="w-6 h-6 text-rose-600 animate-spin mb-1.5" />
+                        <span className="text-xs font-bold text-rose-700 block">جارٍ ضغط الصورة تلقائياً...</span>
+                        <span className="text-[11px] text-slate-400 block mt-0.5">يتم تقليص الحجم لأقل من 200KB</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1.5" />
+                        <span className="text-xs font-semibold text-slate-600 block">انقر لرفع صورة إثبات (سكرين شوت المحادثة أو العطل)</span>
+                        <span className="text-[11px] text-slate-400 block mt-0.5">ضغط تلقائي حتى 200KB و 800x800 بكسل</span>
+                      </>
+                    )}
                     <input
                       type="file"
                       accept="image/*"
+                      disabled={compressingImage}
                       onChange={handleFileChange}
                       className="hidden"
                     />

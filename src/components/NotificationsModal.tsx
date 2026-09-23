@@ -1,5 +1,20 @@
-import React from 'react';
-import { X, CheckCheck, Check, Bell, Clock, CalendarCheck, CheckCircle2, XCircle, Star, ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  X,
+  CheckCheck,
+  Check,
+  Bell,
+  BellRing,
+  Clock,
+  CalendarCheck,
+  CheckCircle2,
+  XCircle,
+  Star,
+  ArrowLeft,
+  Sparkles,
+  Loader2,
+  Send
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 
 interface Props {
@@ -9,7 +24,21 @@ interface Props {
 }
 
 export function NotificationsModal({ isOpen, onClose, onNavigate }: Props) {
-  const { notifications, markNotificationAsRead, markAllNotificationsAsRead, user, switchRole } = useAuth();
+  const {
+    notifications,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    user,
+    pushPermission,
+    isPushSubscribed,
+    requestPushSubscription,
+    unsubscribePush,
+    sendTestPushNotification
+  } = useAuth();
+
+  const [togglingPush, setTogglingPush] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
+  const [testSent, setTestSent] = useState(false);
 
   if (!isOpen) return null;
 
@@ -20,16 +49,39 @@ export function NotificationsModal({ isOpen, onClose, onNavigate }: Props) {
     onClose();
     if (notif.link) {
       if (notif.link.includes('customer')) {
-        if (user && user.role !== 'customer') {
-          await switchRole('customer');
-        }
         onNavigate('customer-dashboard');
       } else if (notif.link.includes('provider')) {
-        if (user && user.role !== 'provider') {
-          await switchRole('provider');
-        }
         onNavigate('provider-dashboard');
       }
+    }
+  };
+
+  const handleTogglePush = async () => {
+    setTogglingPush(true);
+    try {
+      if (isPushSubscribed) {
+        await unsubscribePush();
+      } else {
+        await requestPushSubscription();
+      }
+    } finally {
+      setTogglingPush(false);
+    }
+  };
+
+  const handleSendTestPush = async () => {
+    setSendingTest(true);
+    try {
+      await sendTestPushNotification(
+        'منصة خلصلى | إشعار نظامي 🚀',
+        'تم اختبار التنبيه الفوري بنجاح! ستصلك تنبيهات الحجوزات والرسائل لحظة بلحظة.'
+      );
+      setTestSent(true);
+      setTimeout(() => setTestSent(false), 3000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSendingTest(false);
     }
   };
 
@@ -101,6 +153,81 @@ export function NotificationsModal({ isOpen, onClose, onNavigate }: Props) {
             >
               <X className="w-5 h-5" />
             </button>
+          </div>
+        </div>
+
+        {/* Native Web Push Status & Control Banner */}
+        <div className="px-4 py-3 bg-slate-50/80 border-b border-slate-200/70">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                  isPushSubscribed ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'
+                }`}
+              />
+              <div className="text-xs">
+                <span className="font-bold text-slate-800">
+                  {isPushSubscribed ? 'الإشعارات الفورية (Web Push): ' : 'إشعارات الويب الفورية: '}
+                </span>
+                <span
+                  className={
+                    isPushSubscribed
+                      ? 'text-emerald-700 font-bold'
+                      : 'text-slate-500 font-medium'
+                  }
+                >
+                  {isPushSubscribed ? 'مفعّلة على هذا المتصفح' : 'غير مفعّلة'}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {isPushSubscribed && (
+                <button
+                  type="button"
+                  disabled={sendingTest}
+                  onClick={handleSendTestPush}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold border border-emerald-200 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  title="إرسال إشعار تجريبي لاختبار التنبيه الفوري"
+                >
+                  {sendingTest ? (
+                    <Loader2 className="w-3 h-3 animate-spin text-emerald-600" />
+                  ) : testSent ? (
+                    <Check className="w-3 h-3 text-emerald-600" />
+                  ) : (
+                    <Send className="w-3 h-3 text-emerald-600" />
+                  )}
+                  <span>{testSent ? 'تم الإرسال!' : 'إشعار تجريبي'}</span>
+                </button>
+              )}
+
+              {pushPermission !== 'unsupported' && (
+                <button
+                  type="button"
+                  disabled={togglingPush}
+                  onClick={handleTogglePush}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50 ${
+                    isPushSubscribed
+                      ? 'text-slate-600 hover:text-rose-600 hover:bg-rose-50 border border-slate-200'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
+                  }`}
+                >
+                  {togglingPush ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      <span>جارٍ التحديث...</span>
+                    </>
+                  ) : isPushSubscribed ? (
+                    <span>تعطيل</span>
+                  ) : (
+                    <>
+                      <BellRing className="w-3 h-3" />
+                      <span>تفعيل الآن</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

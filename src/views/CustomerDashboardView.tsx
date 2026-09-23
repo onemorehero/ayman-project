@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Calendar,
   Clock,
@@ -15,7 +15,10 @@ import {
   Zap,
   Sparkles,
   ChevronLeft,
-  Edit3
+  Edit3,
+  Camera,
+  Loader2,
+  UploadCloud
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 import { api } from '../lib/api.js';
@@ -36,6 +39,39 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'accepted' | 'pending' | 'completed'>('all');
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isQuickUploadingAvatar, setIsQuickUploadingAvatar] = useState(false);
+  const [quickUploadMessage, setQuickUploadMessage] = useState<string | null>(null);
+  const quickFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleQuickAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (!file.type.startsWith('image/')) {
+      setQuickUploadMessage('يرجى اختيار ملف صورة صالح (JPG, PNG, WebP)');
+      setTimeout(() => setQuickUploadMessage(null), 3500);
+      return;
+    }
+    setIsQuickUploadingAvatar(true);
+    setQuickUploadMessage('جارٍ ضغط ورفع الصورة...');
+    try {
+      const res = await api.uploadUserAvatar(user.id, file);
+      await updateCustomerProfile({
+        name: user.name,
+        phone: user.phone,
+        address: customer?.address,
+        avatarUrl: res.url
+      });
+      setQuickUploadMessage(`تم تحديث الصورة بنجاح! الحجم: ${res.compressedSizeKB}KB (وفرت ${res.savedPercentage}%)`);
+      setTimeout(() => setQuickUploadMessage(null), 4000);
+    } catch (err: any) {
+      console.error('Quick avatar upload failed:', err);
+      setQuickUploadMessage(err.message || 'حدث خطأ أثناء ضغط ورفع الصورة');
+      setTimeout(() => setQuickUploadMessage(null), 4000);
+    } finally {
+      setIsQuickUploadingAvatar(false);
+      if (quickFileInputRef.current) quickFileInputRef.current.value = '';
+    }
+  };
 
   // Modals state
   const [selectedBookingForReview, setSelectedBookingForReview] = useState<Booking | null>(null);
@@ -134,6 +170,14 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
       {/* Header Profile Section */}
       <div className="bg-white rounded-3xl p-6 sm:p-7 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col sm:flex-row items-center sm:items-start justify-between gap-5 text-center sm:text-right">
         <div className="flex flex-col sm:flex-row items-center gap-4">
+          <input
+            type="file"
+            ref={quickFileInputRef}
+            onChange={handleQuickAvatarChange}
+            accept="image/png,image/jpeg,image/webp,image/jpg"
+            className="hidden"
+          />
+
           <div className="relative group">
             <UserAvatar
               src={user?.avatarUrl}
@@ -141,13 +185,19 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
               className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl sm:rounded-3xl border border-slate-200 shadow-xs"
               iconClassName="w-8 h-8 sm:w-10 sm:h-10 text-slate-400"
             />
+            {isQuickUploadingAvatar && (
+              <div className="absolute inset-0 bg-slate-950/60 rounded-2xl sm:rounded-3xl flex items-center justify-center backdrop-blur-xs">
+                <Loader2 className="w-6 h-6 text-white animate-spin" />
+              </div>
+            )}
             <button
               type="button"
-              onClick={() => setIsEditProfileOpen(true)}
-              className="absolute -bottom-1 -left-1 w-7 h-7 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 shadow-sm flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95"
-              title="تعديل الصورة والبيانات"
+              disabled={isQuickUploadingAvatar}
+              onClick={() => quickFileInputRef.current?.click()}
+              className="absolute -bottom-1 -left-1 w-7 h-7 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-emerald-700 shadow-sm flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 disabled:opacity-50"
+              title="رفع صورة شخصية جديدة من جهازك (ضغط تلقائي 200KB)"
             >
-              <Edit3 className="w-3.5 h-3.5" />
+              <Camera className="w-3.5 h-3.5" />
             </button>
           </div>
           <div className="space-y-1.5">
@@ -167,6 +217,24 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
               <span>·</span>
               <span>{customer?.address || 'العنوان غير محدد'}</span>
             </div>
+
+            {/* Quick Upload Status Message */}
+            {quickUploadMessage && (
+              <div
+                className={`mt-2 px-3 py-1.5 rounded-xl text-xs font-bold inline-flex items-center gap-1.5 ${
+                  isQuickUploadingAvatar
+                    ? 'bg-amber-50 text-amber-800 border border-amber-200 animate-pulse'
+                    : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                }`}
+              >
+                {isQuickUploadingAvatar ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600 shrink-0" />
+                ) : (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                )}
+                <span>{quickUploadMessage}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -548,6 +616,7 @@ export function CustomerDashboardView({ onNavigateToProvider }: Props) {
       <EditProfileModal
         isOpen={isEditProfileOpen}
         onClose={() => setIsEditProfileOpen(false)}
+        userId={user?.id || ''}
         initialName={user?.name || ''}
         initialPhone={user?.phone || ''}
         initialAddress={customer?.address || ''}

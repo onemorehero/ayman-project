@@ -29,7 +29,7 @@ export function Header({
   onOpenNotifications,
   onOpenOnboarding
 }: Props) {
-  const { user, logout, unreadNotificationsCount, triggerTour } = useAuth();
+  const { user, logout, unreadNotificationsCount, triggerTour, isPushSubscribed } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleOpenTour = () => {
@@ -175,11 +175,14 @@ export function Header({
                 onClick={onOpenNotifications}
                 className="relative w-10 h-10 rounded-xl border border-slate-200 hover:bg-slate-50 active:scale-95 flex items-center justify-center text-slate-700 transition-all cursor-pointer"
                 aria-label="الإشعارات"
+                title={isPushSubscribed ? 'الإشعارات (التنبيهات الفورية مفعّلة ✅)' : 'الإشعارات'}
               >
                 <Bell className="w-4 h-4" />
-                {unreadNotificationsCount > 0 && (
+                {unreadNotificationsCount > 0 ? (
                   <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-emerald-600 ring-2 ring-white" />
-                )}
+                ) : isPushSubscribed ? (
+                  <span className="absolute bottom-2 right-2 w-1.5 h-1.5 rounded-full bg-emerald-500" title="الإشعارات الفورية نشطة" />
+                ) : null}
               </button>
             )}
 

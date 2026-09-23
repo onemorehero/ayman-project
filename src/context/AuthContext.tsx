@@ -2,6 +2,15 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import type { Session } from '@supabase/supabase-js';
 import type { User, Customer, Provider, AppNotification } from '../types.js';
 import { api, setApiUser, supabase } from '../lib/api.js';
+import {
+  isPushSupported,
+  getPushPermissionState,
+  subscribeUserToPush,
+  unsubscribeUserFromPush,
+  getExistingSubscription,
+  sendLocalTestNotification,
+  registerServiceWorker
+} from '../lib/pushManager.js';
 
 interface AuthContextType {
   user: User | null;
@@ -14,6 +23,11 @@ interface AuthContextType {
   triggerTour: () => void;
   notifications: AppNotification[];
   unreadNotificationsCount: number;
+  pushPermission: NotificationPermission | 'unsupported';
+  isPushSubscribed: boolean;
+  requestPushSubscription: () => Promise<boolean>;
+  unsubscribePush: () => Promise<boolean>;
+  sendTestPushNotification: (title?: string, body?: string) => Promise<void>;
   login: (email: string, password?: string) => Promise<void>;
   signup: (payload: any) => Promise<void>;
   register: (payload: any) => Promise<void>;
@@ -40,6 +54,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>(getPushPermissionState());
+  const [isPushSubscribed, setIsPushSubscribed] = useState(false);
+
+  // Check push subscription state on mount and update
+  useEffect(() => {
+    let isMounted = true;
+    async function checkSubscription() {
+      if (!isPushSupported()) {
+        if (isMounted) setPushPermission('unsupported');
+        return;
+      }
+      setPushPermission(getPushPermissionState());
+      try {
+        const sub = await getExistingSubscription();
+        if (isMounted) {
+          setIsPushSubscribed(!!sub);
+        }
+      } catch {
+        if (isMounted) setIsPushSubscribed(false);
+      }
+    }
+    checkSubscription();
+    // Register Service Worker in the background
+    registerServiceWorker().catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  const requestPushSubscription = useCallback(async (): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      const sub = await subscribeUserToPush(user.id);
+      if (sub) {
+        setIsPushSubscribed(true);
+        setPushPermission('granted');
+        return true;
+      }
+      return false;
+    } catch (err: any) {
+      console.warn('[PushNotification] Error requesting subscription:', err);
+      setPushPermission(getPushPermissionState());
+      return false;
+    }
+  }, [user]);
+
+  const unsubscribePush = useCallback(async (): Promise<boolean> => {
+    if (!user) return false;
+    try {
+      const ok = await unsubscribeUserFromPush(user.id);
+      if (ok) {
+        setIsPushSubscribed(false);
+      }
+      return ok;
+    } catch {
+      return false;
+    }
+  }, [user]);
+
+  const sendTestPushNotification = useCallback(async (title?: string, body?: string) => {
+    await sendLocalTestNotification(title, body);
+  }, []);
 
   const loadUserProfile = useCallback(async (userId: string, email?: string) => {
     try {
@@ -292,6 +369,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         triggerTour,
         notifications,
         unreadNotificationsCount,
+        pushPermission,
+        isPushSubscribed,
+        requestPushSubscription,
+        unsubscribePush,
+        sendTestPushNotification,
         login,
         signup,
         register,

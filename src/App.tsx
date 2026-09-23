@@ -20,6 +20,7 @@ import { Footer } from './components/Footer.js';
 import { NotificationsModal } from './components/NotificationsModal.js';
 import { AuthModal } from './components/AuthModal.js';
 import { OnboardingTour } from './components/OnboardingTour.js';
+import { PushNotificationPrompt } from './components/PushNotificationPrompt.js';
 
 import { HomeView } from './views/HomeView.js';
 import { ProvidersListingView } from './views/ProvidersListingView.js';
@@ -257,6 +258,9 @@ function MainApp() {
 
       {/* Role-based Onboarding Tour: Shows ONLY after first signup / registration */}
       <OnboardingTour />
+
+      {/* Native Web Push Notification Graceful Prompt */}
+      <PushNotificationPrompt />
     </div>
   );
 }
