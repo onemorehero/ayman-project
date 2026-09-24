@@ -37,6 +37,7 @@ export function NotificationsModal({ isOpen, onClose, onNavigate }: Props) {
   } = useAuth();
 
   const [togglingPush, setTogglingPush] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
   const [sendingTest, setSendingTest] = useState(false);
   const [testSent, setTestSent] = useState(false);
 
@@ -58,12 +59,18 @@ export function NotificationsModal({ isOpen, onClose, onNavigate }: Props) {
 
   const handleTogglePush = async () => {
     setTogglingPush(true);
+    setPushError(null);
     try {
       if (isPushSubscribed) {
         await unsubscribePush();
       } else {
-        await requestPushSubscription();
+        const res = await requestPushSubscription();
+        if (!res.success && res.error) {
+          setPushError(res.error);
+        }
       }
+    } catch (err: any) {
+      setPushError(err.message || 'حدث خطأ غير متوقع أثناء معالجة الإشعارات');
     } finally {
       setTogglingPush(false);
     }
@@ -229,6 +236,19 @@ export function NotificationsModal({ isOpen, onClose, onNavigate }: Props) {
               )}
             </div>
           </div>
+
+          {pushError && (
+            <div className="mt-2 p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between gap-2 animate-in fade-in">
+              <span className="text-[11px] font-medium leading-tight">{pushError}</span>
+              <button
+                type="button"
+                onClick={() => setPushError(null)}
+                className="text-rose-500 hover:text-rose-700 p-0.5"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Notifications List */}

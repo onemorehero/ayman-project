@@ -25,7 +25,7 @@ interface AuthContextType {
   unreadNotificationsCount: number;
   pushPermission: NotificationPermission | 'unsupported';
   isPushSubscribed: boolean;
-  requestPushSubscription: () => Promise<boolean>;
+  requestPushSubscription: () => Promise<{ success: boolean; error?: string }>;
   unsubscribePush: () => Promise<boolean>;
   sendTestPushNotification: (title?: string, body?: string) => Promise<void>;
   login: (email: string, password?: string) => Promise<void>;
@@ -84,20 +84,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user]);
 
-  const requestPushSubscription = useCallback(async (): Promise<boolean> => {
-    if (!user) return false;
+  const requestPushSubscription = useCallback(async (): Promise<{ success: boolean; error?: string }> => {
+    if (!user) {
+      return { success: false, error: 'يجب تسجيل الدخول أولاً لتفعيل الإشعارات' };
+    }
     try {
       const sub = await subscribeUserToPush(user.id);
       if (sub) {
         setIsPushSubscribed(true);
         setPushPermission('granted');
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, error: 'تعذر إتمام الاشتراك في خدمة الإشعارات' };
     } catch (err: any) {
       console.warn('[PushNotification] Error requesting subscription:', err);
       setPushPermission(getPushPermissionState());
-      return false;
+      return {
+        success: false,
+        error: err.message || 'حدث خطأ أثناء محاولة تفعيل الإشعارات'
+      };
     }
   }, [user]);
 

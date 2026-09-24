@@ -6,24 +6,64 @@
 import { supabase } from './api.js';
 
 // VAPID Public Key from environment variable or standard secure fallback
-const VAPID_PUBLIC_KEY =
-  ((import.meta as any).env?.VITE_VAPID_PUBLIC_KEY as string | undefined) ||
+const DEFAULT_VAPID_PUBLIC_KEY =
   'BBgprK4UOosNeN61HoTTJCiBz_InemWl-sCcQVCNcYp3Wu_WyI0FDEQnzkYfc5BXomRJopMMkZnaPXo0e9BUXpY';
 
+export function getVapidPublicKey(): string {
+  const envKey = ((import.meta as any).env?.VITE_VAPID_PUBLIC_KEY as string | undefined)?.trim();
+  if (envKey && envKey.length > 20) {
+    return envKey;
+  }
+  return DEFAULT_VAPID_PUBLIC_KEY;
+}
+
 /**
- * Converts a base64 string to a Uint8Array required by PushManager.subscribe
+ * Promise timeout wrapper to prevent any async call from hanging indefinitely
+ */
+export async function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  errorMessage: string
+): Promise<T> {
+  let timeoutId: any;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(errorMessage));
+    }, ms);
+  });
+
+  return Promise.race([
+    promise.then(result => {
+      clearTimeout(timeoutId);
+      return result;
+    }),
+    timeoutPromise
+  ]);
+}
+
+/**
+ * Converts a base64 VAPID string to a Uint8Array required by PushManager.subscribe
  */
 export function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
+  if (!base64String || typeof base64String !== 'string') {
+    throw new Error('مفتاح VAPID العام مفقود أو بصيغة غير صالحة.');
   }
-  return outputArray;
+
+  const cleanBase64 = base64String.trim().replace(/['"]/g, '');
+  const padding = '='.repeat((4 - (cleanBase64.length % 4)) % 4);
+  const base64 = (cleanBase64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+
+  try {
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  } catch (err: any) {
+    throw new Error(`تعذر فك تشفير مفتاح VAPID العام: ${err.message || 'صيغة Base64 غير صالحة'}`);
+  }
 }
 
 /**
@@ -47,24 +87,34 @@ export function getPushPermissionState(): NotificationPermission | 'unsupported'
 }
 
 /**
- * Registers the root Service Worker (/sw.js)
+ * Registers the root Service Worker (/sw.js) with strict timeout & error tracking
  */
-export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+export async function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
   if (!isPushSupported()) {
-    console.warn('[PushManager] Service Worker or Push not supported in this browser.');
-    return null;
+    throw new Error('متصفحك الحالي لا يدعم تقنية الـ Service Worker أو الإشعارات الفورية.');
   }
 
   try {
-    const registration = await navigator.serviceWorker.register('/sw.js', {
-      scope: '/'
+    // 1. Register sw.js with timeout
+    const registration = await withTimeout(
+      navigator.serviceWorker.register('/sw.js', { scope: '/' }),
+      8000,
+      'استغرق تسجيل ملف sw.js وقتاً طويلاً ولم يستجب المتصفح.'
+    );
+
+    // 2. Await readiness with a graceful timeout so it NEVER hangs forever
+    await withTimeout(
+      navigator.serviceWorker.ready,
+      6000,
+      'لم يكتمل تجهيز الـ Service Worker في الوقت المحدد.'
+    ).catch(readyErr => {
+      console.warn('[PushManager] Ready timeout warning (proceeding):', readyErr.message);
     });
-    // Wait for the service worker to become ready/active
-    await navigator.serviceWorker.ready;
+
     return registration;
-  } catch (error) {
+  } catch (error: any) {
     console.error('[PushManager] Service Worker registration failed:', error);
-    return null;
+    throw new Error(`فشل تسجيل ملف Service Worker (/sw.js): ${error.message || 'خطأ غير معروف'}`);
   }
 }
 
@@ -75,8 +125,17 @@ export async function getExistingSubscription(): Promise<PushSubscription | null
   if (!isPushSupported()) return null;
 
   try {
-    const registration = await navigator.serviceWorker.ready;
-    return await registration.pushManager.getSubscription();
+    let registration = await navigator.serviceWorker.getRegistration('/');
+    if (!registration) {
+      registration = await registerServiceWorker();
+    }
+    if (!registration || !registration.pushManager) return null;
+
+    return await withTimeout(
+      registration.pushManager.getSubscription(),
+      5000,
+      'استغرق فحص الاشتراك الحالي وقتاً طويلاً'
+    );
   } catch (error) {
     console.warn('[PushManager] Error fetching existing push subscription:', error);
     return null;
@@ -84,85 +143,130 @@ export async function getExistingSubscription(): Promise<PushSubscription | null
 }
 
 /**
- * Requests permission, registers Service Worker, subscribes to PushManager with VAPID key,
+ * Requests permission, ensures Service Worker is active, subscribes to PushManager with VAPID key,
  * and securely saves the subscription object to Supabase users table and local cache.
  */
-export async function subscribeUserToPush(userId: string): Promise<PushSubscription | null> {
+export async function subscribeUserToPush(userId: string): Promise<PushSubscription> {
   if (!isPushSupported()) {
-    throw new Error('متصفحك لا يدعم الإشعارات الفورية (Push Notifications)');
+    throw new Error('متصفحك لا يدعم الإشعارات الفورية (Push Notifications).');
   }
 
-  // 1. Request user permission gracefully
+  // 1. Request user permission with timeout and explicit exception handling
   let permission = Notification.permission;
   if (permission !== 'granted') {
-    permission = await Notification.requestPermission();
+    try {
+      permission = await withTimeout(
+        Notification.requestPermission(),
+        15000,
+        'لم يتم الاستجابة لطلب إذن الإشعارات من المتصفح في الوقت المحدد.'
+      );
+    } catch (permErr: any) {
+      throw new Error(
+        `تعذر طلب إذن الإشعارات من المتصفح: ${permErr.message || 'قد تكون صلاحيات الإشعارات مقيدة أو أنك تتصفح داخل إطار مدمج (Iframe).'}`
+      );
+    }
+  }
+
+  if (permission === 'denied') {
+    throw new Error('تم حظر صلاحية الإشعارات في إعدادات المتصفح لهذا الموقع. يرجى تفعيلها من إعدادات المتصفح والمحاولة مجدداً.');
   }
 
   if (permission !== 'granted') {
-    throw new Error('لم يتم منح إذن الإشعارات من قبل المستخدم');
+    throw new Error('لم يتم منح إذن الإشعارات. يرجى الموافقة على طلب المتصفح لتفعيل التنبيهات.');
   }
 
-  // 2. Ensure Service Worker is registered
-  let registration = await navigator.serviceWorker.getRegistration('/');
-  if (!registration) {
+  // 2. Ensure Service Worker (/sw.js) is registered and active
+  let registration: ServiceWorkerRegistration;
+  try {
     registration = await registerServiceWorker();
+  } catch (swErr: any) {
+    throw new Error(`خطأ في الـ Service Worker: ${swErr.message}`);
   }
-  if (!registration) {
-    throw new Error('فشل تسجيل الـ Service Worker');
+
+  if (!registration || !registration.pushManager) {
+    throw new Error('واجهة PushManager غير متاحة في الـ Service Worker لهذا المتصفح.');
   }
 
-  await navigator.serviceWorker.ready;
-
-  // 3. Check for existing subscription or create new
-  let subscription = await registration.pushManager.getSubscription();
-
-  if (!subscription) {
-    try {
-      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey
-      });
-    } catch (err: any) {
-      console.error('[PushManager] Subscribe failed:', err);
-      throw new Error(`تعذر تفعيل الاشتراك في خدمة الإشعارات: ${err.message || 'خطأ غير معروف'}`);
+  // 3. Prepare and validate VAPID key
+  const vapidKeyString = getVapidPublicKey();
+  let applicationServerKey: Uint8Array;
+  try {
+    applicationServerKey = urlBase64ToUint8Array(vapidKeyString);
+    if (!applicationServerKey || applicationServerKey.length === 0) {
+      throw new Error('طول المفتاح العام غير صالح.');
     }
+  } catch (vapidErr: any) {
+    throw new Error(`فشل معالجة مفتاح VAPID العام: ${vapidErr.message}`);
+  }
+
+  // 4. Subscribe with PushManager
+  let subscription: PushSubscription;
+  try {
+    const existing = await withTimeout(
+      registration.pushManager.getSubscription(),
+      4000,
+      'مهلة فحص الاشتراك'
+    ).catch(() => null);
+
+    if (existing) {
+      subscription = existing;
+    } else {
+      subscription = await withTimeout(
+        registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey
+        }),
+        10000,
+        'استغرق الاتصال بخدمة PushManager للمتصفح وقتاً طويلاً. تأكد من تفعيل الإنترنت.'
+      );
+    }
+  } catch (subErr: any) {
+    console.error('[PushManager] PushManager.subscribe failed:', subErr);
+    throw new Error(`فشل اشتراك المتصفح في الإشعارات: ${subErr.message || 'تأكد من دعم المتصفح لخدمات Google Push/Mozilla Push.'}`);
   }
 
   const subscriptionJson = subscription.toJSON();
 
-  // 4. Cache subscription locally
+  // 5. Cache locally
   try {
     localStorage.setItem(`khalasly_push_sub_${userId}`, JSON.stringify(subscriptionJson));
     localStorage.setItem('khalasly_push_enabled', 'true');
     localStorage.removeItem('khalasly_push_prompt_dismissed');
   } catch {
-    // ignore local storage quota errors
+    // ignore local storage errors
   }
 
-  // 5. Save subscription to Supabase users table
+  // 6. Save subscription to Supabase users table (with non-blocking safety)
   if (supabase && userId) {
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          // Save complete push subscription JSON into user record
-          push_subscription: subscriptionJson
-        })
-        .eq('id', userId);
+      const dbPromise = new Promise<{ error: any }>((resolve) => {
+        (supabase
+          .from('users')
+          .update({
+            push_subscription: subscriptionJson
+          })
+          .eq('id', userId) as PromiseLike<any>)
+          .then(resolve, (err) => resolve({ error: err }));
+      });
 
-      if (error) {
-        // If column does not exist yet in Supabase, log migration guide non-destructively
-        if (error.message && error.message.includes('push_subscription')) {
+      const { error: dbError } = await withTimeout(
+        dbPromise,
+        5000,
+        'استغرق حفظ الاشتراك في قاعدة البيانات وقتاً أطول من المعتاد'
+      );
+
+      if (dbError) {
+        if (dbError.message && dbError.message.includes('push_subscription')) {
           console.info(
-            '[PushManager] Note: "push_subscription" column not found in "users" table. Run SQL: "ALTER TABLE users ADD COLUMN IF NOT EXISTS push_subscription JSONB;" to enable cloud targeting.'
+            '[PushManager] Note: "push_subscription" column missing in Supabase users table. Subscription active locally.'
           );
         } else {
-          console.warn('[PushManager] Supabase subscription update note:', error.message);
+          console.warn('[PushManager] Supabase note:', dbError.message);
         }
       }
-    } catch (dbErr) {
-      console.warn('[PushManager] Supabase push_subscription save warning:', dbErr);
+    } catch (saveErr: any) {
+      // Non-blocking: even if Supabase save times out, the browser subscription succeeded
+      console.warn('[PushManager] Non-blocking Supabase sync error:', saveErr.message);
     }
   }
 
@@ -200,9 +304,9 @@ export async function unsubscribeUserFromPush(userId: string): Promise<boolean> 
     }
 
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error('[PushManager] Unsubscribe failed:', error);
-    return false;
+    throw new Error(`تعذر إلغاء الاشتراك: ${error.message}`);
   }
 }
 
@@ -215,7 +319,7 @@ export async function sendLocalTestNotification(
   url: string = '/'
 ): Promise<void> {
   if (!isPushSupported() || Notification.permission !== 'granted') {
-    throw new Error('يرجى تفعيل صلاحية الإشعارات أولاً لتجربة الإشعار');
+    throw new Error('يرجى تفعيل صلاحية الإشعارات أولاً لتجربة الإشعار.');
   }
 
   try {

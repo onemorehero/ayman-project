@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, BellRing, Check, X, Sparkles, Loader2 } from 'lucide-react';
+import { Bell, BellRing, Check, X, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.js';
 
 export function PushNotificationPrompt() {
@@ -13,6 +13,7 @@ export function PushNotificationPrompt() {
   const [dismissed, setDismissed] = useState(true);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // Only show prompt if user is logged in, push is supported, and user hasn't granted yet or hasn't subscribed
@@ -50,17 +51,22 @@ export function PushNotificationPrompt() {
 
   const handleEnable = async () => {
     setLoading(true);
+    setErrorMessage(null);
     try {
-      const ok = await requestPushSubscription();
-      if (ok) {
+      const res = await requestPushSubscription();
+      if (res.success) {
         setSuccess(true);
         setTimeout(() => {
           setDismissed(true);
-        }, 1500);
+        }, 1800);
+      } else {
+        setErrorMessage(res.error || 'تعذر إتمام تفعيل الإشعارات');
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('[PushNotificationPrompt] handleEnable error:', err);
+      setErrorMessage(err.message || 'حدث خطأ أثناء معالجة الاشتراك');
     } finally {
+      // ALWAYS stop loading immediately
       setLoading(false);
     }
   };
@@ -82,7 +88,13 @@ export function PushNotificationPrompt() {
       >
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-            {success ? <Check className="w-5 h-5 text-emerald-700" /> : <BellRing className="w-5 h-5 animate-bounce" />}
+            {success ? (
+              <Check className="w-5 h-5 text-emerald-700" />
+            ) : errorMessage ? (
+              <AlertCircle className="w-5 h-5 text-rose-600" />
+            ) : (
+              <BellRing className="w-5 h-5 animate-bounce" />
+            )}
           </div>
 
           <div className="flex-1 min-w-0">
@@ -107,6 +119,24 @@ export function PushNotificationPrompt() {
                 : 'فعّل التنبيهات الفورية لتتابع رد الفنيين وتحديثات طلبات الصيانة لحظة بلحظة حتى لو كان المتصفح مغلقاً!'}
             </p>
 
+            {/* Error Message Toast / Alert */}
+            {errorMessage && (
+              <div className="mt-2.5 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-start gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-rose-800">تعذر التفعيل:</p>
+                  <p className="text-[11px] leading-relaxed text-rose-700 mt-0.5">{errorMessage}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setErrorMessage(null)}
+                  className="text-rose-400 hover:text-rose-700"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {success ? (
               <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 p-2 rounded-xl border border-emerald-200">
                 <Check className="w-4 h-4" />
@@ -128,7 +158,7 @@ export function PushNotificationPrompt() {
                   ) : (
                     <>
                       <Bell className="w-3.5 h-3.5" />
-                      <span>تفعيل الإشعارات الآن</span>
+                      <span>{errorMessage ? 'إعادة المحاولة' : 'تفعيل الإشعارات الآن'}</span>
                     </>
                   )}
                 </button>
